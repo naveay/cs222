@@ -1,13 +1,15 @@
 #ifndef _pfm_h_
 #define _pfm_h_
 #include <stdio.h>
+#include <stdlib.h>
 #include <map>
 typedef int RC;
 //1. file already exist while using createFile
 //2. file not exist while using deleteFile
 //3. file not exist while using OpenFile
 //4. fileHandle is already a handle for an open file when it is passed to the OpenFile method
-
+//5. pageNum is not exist;
+//6. data is too long. out of page_size;
 typedef unsigned PageNum;
 using namespace std;
 #define PAGE_SIZE 4096
@@ -50,6 +52,7 @@ public:
     const char * getFile();
 private:
     char const* pfile=NULL;
+	FILE *pFile;
     unsigned pagenumber;
 };
 
