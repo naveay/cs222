@@ -10,7 +10,14 @@ using namespace std;
 
 void rbfTest()
 {
-  // PagedFileManager *pfm = PagedFileManager::Instance();
+  const char * path="d:\\a.txt";
+  PagedFileManager *pfm = PagedFileManager::Instance();
+  pfm->CreateFile(path);
+  //pfm->DestroyFile(path);
+  FileHandle *file=new FileHandle();
+  FileHandle f=*file;
+  pfm->OpenFile(path,f);
+  pfm->OpenFile(path,f);
   // RecordBasedFileManager *rbfm = RecordBasedFileManager::Instance();
 
   // write your own testing cases here
