@@ -2,6 +2,8 @@
 #define _pfm_h_
 #include <stdio.h>
 #include <stdlib.h>
+#include <fstream>
+#include <iostream>
 #include <map>
 typedef int RC;
 //1. file already exist while using createFile

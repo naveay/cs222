@@ -71,7 +71,7 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 
 RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 {
-    return -1;
+    return 0;
 }
 
 
@@ -89,13 +89,10 @@ FileHandle::~FileHandle()
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
 {
 	pFile=fopen(pfile,"rb");
-	if(pageNum>pagenumber||pageNum<=0)
+	if(pageNum>=pagenumber||pageNum<0)
 		return 5;   //pageNum is not exist;
-	fseek(pFile,(pageNum-1)*PAGE_SIZE,SEEK_SET);
-	if(fgets((char*)data,PAGE_SIZE,pFile)==NULL)
-	{
-		return 5;   //pageNum is not exist;
-	}
+	fseek(pFile,pageNum*PAGE_SIZE,SEEK_SET);
+	fread((char*)data,sizeof(char),PAGE_SIZE,pFile);
 	fclose(pFile);
     return 0;
 }
@@ -108,17 +105,19 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 	{
 		return 6;     //data is too long;
 	}
-	if(pageNum==pagenumber+1)
+	if(pageNum==pagenumber)
 		AppendPage(data);
-	else if(pageNum>pagenumber+1)
+	else if(pageNum>pagenumber)
 	{
 		return 5;   //pageNum is not exist;
 	}
 	else
 	{
 		pFile=fopen(pfile,"rb+");
-		fseek(pFile,(pageNum-1)*PAGE_SIZE,SEEK_SET);
-		fputs((char *)data,pFile);
+		fseek(pFile,pageNum*PAGE_SIZE,SEEK_SET);
+		//fputs((char *)data,pFile);
+		fwrite((char*)data,sizeof(char),PAGE_SIZE,pFile);
+		fflush (pFile);
 		fclose(pFile);
 	}
 	return 0;
@@ -134,7 +133,9 @@ RC FileHandle::AppendPage(const void *data)
 	}
 	pFile=fopen(pfile,"rb+");
 	fseek(pFile,pagenumber*PAGE_SIZE,SEEK_SET);
-	fputs((char *)data,pFile);
+	//fputs((char *)data,pFile);
+	fwrite((char*)data,sizeof(char),PAGE_SIZE,pFile);
+	fflush (pFile);
 	fclose(pFile);
 	pagenumber++;
 	return 0;
