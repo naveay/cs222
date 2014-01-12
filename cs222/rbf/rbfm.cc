@@ -32,7 +32,8 @@ RC RecordBasedFileManager::insertTuple(const string &fileName, const vector<Attr
 		else
 		{
 			char* tmp=new char[4];
-			memcpy(tmp,data+len,4);
+			char *test = (char *)data+len;
+			memcpy(tmp,test,4);
 			len+=4;
 			len+=strtol(tmp,NULL,16);
 			delete(tmp);
