@@ -26,7 +26,7 @@ PagedFileManager::~PagedFileManager()
 RC PagedFileManager::CreateFile(const char *fileName)
 {
 	FILE * pFile;
-	pFile=fopen(fileName,"rb");
+	pFile=fopen(fileName,"rb+");
 	if(pFile!=NULL)
 	{
 		return 1;    //file already exist while using createFile
@@ -56,21 +56,22 @@ RC PagedFileManager::DestroyFile(const char *fileName)
 RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 {
 	FILE * pFile;
-	pFile=fopen(fileName,"rb");
+	pFile=fopen(fileName,"rb+");
 	if(pFile==NULL)
 	{
 		return 3;    //file not exist while using OpenFile
 	}
 	else
 	{
-		fclose(pFile);
-		return fileHandle.setFile(fileName);
+		return fileHandle.setFile(pFile);
 	}
 }
 
 
 RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 {
+    fflush(fileHandle.getFile());
+    fclose(fileHandle.getFile());
     return 0;
 }
 
@@ -88,12 +89,12 @@ FileHandle::~FileHandle()
 
 RC FileHandle::ReadPage(PageNum pageNum, void *data)
 {
-	pFile=fopen(pfile,"rb");
+	//pFile=fopen(pfile,"rb");
 	if(pageNum>=pagenumber||pageNum<0)
 		return 5;   //pageNum is not exist;
 	fseek(pFile,pageNum*PAGE_SIZE,SEEK_SET);
 	fread((char*)data,sizeof(char),PAGE_SIZE,pFile);
-	fclose(pFile);
+	//fclose(pFile);
     return 0;
 }
 
@@ -113,12 +114,12 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 	}
 	else
 	{
-		pFile=fopen(pfile,"rb+");
+		//pFile=fopen(pfile,"rb+");
 		fseek(pFile,pageNum*PAGE_SIZE,SEEK_SET);
 		//fputs((char *)data,pFile);
 		fwrite((char*)data,sizeof(char),PAGE_SIZE,pFile);
 		fflush (pFile);
-		fclose(pFile);
+		//fclose(pFile);
 	}
 	return 0;
 }
@@ -131,12 +132,12 @@ RC FileHandle::AppendPage(const void *data)
 	{
 		return 6;     //data is too long;
 	}
-	pFile=fopen(pfile,"rb+");
+	//pFile=fopen(pfile,"rb+");
 	fseek(pFile,pagenumber*PAGE_SIZE,SEEK_SET);
 	//fputs((char *)data,pFile);
 	fwrite((char*)data,sizeof(char),PAGE_SIZE,pFile);
 	fflush (pFile);
-	fclose(pFile);
+	//fclose(pFile);
 	pagenumber++;
 	return 0;
 }
@@ -147,23 +148,23 @@ unsigned FileHandle::GetNumberOfPages()
     return pagenumber;
 }
 
-RC FileHandle::setFile(const char *file)
+RC FileHandle::setFile(FILE *file)
 {
-	if(pfile!=NULL)
+	if(pFile!=NULL)
 		return 4;
 		//fileHandle is already a handle for an open file when it is passed to the OpenFile method
 	else
-		pfile=file;
+		pFile=file;
 
-	pFile=fopen(pfile,"rb");
+	//pFile=fopen(pfile,"rb");
 	fseek(pFile,0,SEEK_END);
 	pagenumber=ftell(pFile)/PAGE_SIZE;
-	fclose(pFile);
+	//fclose(pFile);
 	return 0;
 }
-const char * FileHandle::getFile()
+FILE * FileHandle::getFile()
 {
-	return pfile;
+	return pFile;
 }
 
 

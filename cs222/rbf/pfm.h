@@ -50,11 +50,10 @@ public:
     unsigned GetNumberOfPages();                                        // Get the number of pages in the file
 
 
-    RC setFile(const char *file);
-    const char * getFile();
+    RC setFile(FILE *file);
+    FILE * getFile();
 private:
-    char const* pfile=NULL;
-	FILE *pFile;
+	FILE *pFile=NULL;
     unsigned pagenumber;
 };
 

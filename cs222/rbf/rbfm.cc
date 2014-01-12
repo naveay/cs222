@@ -20,6 +20,7 @@ RecordBasedFileManager::~RecordBasedFileManager()
 }
 
 RC RecordBasedFileManager::insertTuple(const string &fileName, const vector<Attribute> &recordDescriptor, const void *data, RID &rid) {
+	/*
 	PagedFileManager *pfm = PagedFileManager::Instance();
 	pfm->CreateFile(fileName.c_str());
 	unsigned len=0;
@@ -58,6 +59,7 @@ RC RecordBasedFileManager::insertTuple(const string &fileName, const vector<Attr
 			return 0;
 		}
 	}
+	*/
 	return 0;
 }
 

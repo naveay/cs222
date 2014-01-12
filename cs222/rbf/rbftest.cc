@@ -728,7 +728,7 @@ int main()
     remove("test_4");
 
     RBFTest_1(pfm);
-    //RBFTest_2(pfm);
+    RBFTest_2(pfm);
     RBFTest_3(pfm);
     RBFTest_4(pfm);
     RBFTest_5(pfm);
