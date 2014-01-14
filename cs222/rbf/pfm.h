@@ -12,6 +12,7 @@ typedef int RC;
 //4. fileHandle is already a handle for an open file when it is passed to the OpenFile method
 //5. pageNum is not exist;
 //6. data is too long. out of page_size;
+//7. file is still open while destroying.
 typedef unsigned PageNum;
 using namespace std;
 #define PAGE_SIZE 4096
@@ -35,6 +36,7 @@ protected:
 
 private:
     static PagedFileManager *_pf_manager;
+    map<const char*,int> *refer;
 };
 
 
@@ -51,9 +53,12 @@ public:
 
 
     RC setFile(FILE *file);
+    RC setFile(	const char * pfile);
     FILE * getFile();
+    const char * getFileName();
 private:
 	FILE *pFile=NULL;
+	const char * pfile=NULL;
     unsigned pagenumber;
 };
 

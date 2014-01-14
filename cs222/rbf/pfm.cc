@@ -15,6 +15,7 @@ PagedFileManager* PagedFileManager::Instance()
 
 PagedFileManager::PagedFileManager()
 {
+	refer=new map<const char*,int>();
 }
 
 
@@ -26,14 +27,16 @@ PagedFileManager::~PagedFileManager()
 RC PagedFileManager::CreateFile(const char *fileName)
 {
 	FILE * pFile;
-	pFile=fopen(fileName,"rb+");
+	pFile=fopen(fileName,"rb");
 	if(pFile!=NULL)
 	{
+		fclose(pFile);
 		return 1;    //file already exist while using createFile
 	}
 	else
 	{
-		pFile=fopen(fileName,"ab");
+		refer->insert(pair<const char*,int>(fileName,0));
+		pFile=fopen(fileName,"wb+");
 		fclose(pFile);
 		return 0;
 	}
@@ -42,6 +45,8 @@ RC PagedFileManager::CreateFile(const char *fileName)
 
 RC PagedFileManager::DestroyFile(const char *fileName)
 {
+	if(refer->find(fileName)->second!=0)
+		return  7;
 	if(remove(fileName)==0)
 	{
 		return 0;
@@ -63,6 +68,8 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 	}
 	else
 	{
+		refer->insert(pair<const char*,int>(fileName,refer->find(fileName)->second+1));
+		fileHandle.setFile(fileName);
 		return fileHandle.setFile(pFile);
 	}
 }
@@ -70,6 +77,7 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 
 RC PagedFileManager::CloseFile(FileHandle &fileHandle)
 {
+	refer->insert(pair<const char*,int>(fileHandle.getFileName(),refer->find(fileHandle.getFileName())->second-1));
     fflush(fileHandle.getFile());
     fclose(fileHandle.getFile());
     return 0;
@@ -155,16 +163,28 @@ RC FileHandle::setFile(FILE *file)
 		//fileHandle is already a handle for an open file when it is passed to the OpenFile method
 	else
 		pFile=file;
-
-	//pFile=fopen(pfile,"rb");
 	fseek(pFile,0,SEEK_END);
 	pagenumber=ftell(pFile)/PAGE_SIZE;
-	//fclose(pFile);
 	return 0;
 }
+
+RC FileHandle::setFile(const char * pfile)
+{
+	if(this->pfile!=NULL)
+			return 4;
+			//fileHandle is already a handle for an open file when it is passed to the OpenFile method
+	else
+		this->pfile=pfile;
+	return 0;
+}
+
 FILE * FileHandle::getFile()
 {
 	return pFile;
+}
+const char * FileHandle::getFileName()
+{
+	return this->pfile;
 }
 
 
