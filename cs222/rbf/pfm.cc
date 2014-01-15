@@ -3,7 +3,7 @@
 PagedFileManager* PagedFileManager::_pf_manager = 0;
 
 
-PagedFileManager* PagedFileManager::Instance()
+PagedFileManager* PagedFileManager::instance()
 {
     if(!_pf_manager)
     {
@@ -24,7 +24,7 @@ PagedFileManager::~PagedFileManager()
 }
 
 
-RC PagedFileManager::CreateFile(const char *fileName)
+RC PagedFileManager::createFile(const char *fileName)
 {
 	FILE * pFile;
 	pFile=fopen(fileName,"rb");
@@ -43,7 +43,7 @@ RC PagedFileManager::CreateFile(const char *fileName)
 }
 
 
-RC PagedFileManager::DestroyFile(const char *fileName)
+RC PagedFileManager::destroyFile(const char *fileName)
 {
 	if(refer->find(fileName)->second!=0)
 		return  7;
@@ -58,7 +58,7 @@ RC PagedFileManager::DestroyFile(const char *fileName)
 }
 
 
-RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
+RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 {
 	FILE * pFile;
 	pFile=fopen(fileName,"rb+");
@@ -75,7 +75,7 @@ RC PagedFileManager::OpenFile(const char *fileName, FileHandle &fileHandle)
 }
 
 
-RC PagedFileManager::CloseFile(FileHandle &fileHandle)
+RC PagedFileManager::closeFile(FileHandle &fileHandle)
 {
 	refer->insert(pair<const char*,int>(fileHandle.getFileName(),refer->find(fileHandle.getFileName())->second-1));
     fflush(fileHandle.getFile());
@@ -95,7 +95,7 @@ FileHandle::~FileHandle()
 }
 
 
-RC FileHandle::ReadPage(PageNum pageNum, void *data)
+RC FileHandle::readPage(PageNum pageNum, void *data)
 {
 	//pFile=fopen(pfile,"rb");
 	if(pageNum>=pagenumber||pageNum<0)
@@ -107,7 +107,7 @@ RC FileHandle::ReadPage(PageNum pageNum, void *data)
 }
 
 
-RC FileHandle::WritePage(PageNum pageNum, const void *data)
+RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
 	int len=sizeof(data);
 	if(len>PAGE_SIZE)
@@ -115,7 +115,7 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 		return 6;     //data is too long;
 	}
 	if(pageNum==pagenumber)
-		AppendPage(data);
+		appendPage(data);
 	else if(pageNum>pagenumber)
 	{
 		return 5;   //pageNum is not exist;
@@ -133,7 +133,7 @@ RC FileHandle::WritePage(PageNum pageNum, const void *data)
 }
 
 
-RC FileHandle::AppendPage(const void *data)
+RC FileHandle::appendPage(const void *data)
 {
 	int len=sizeof(data);
 	if(len>PAGE_SIZE)
@@ -151,7 +151,7 @@ RC FileHandle::AppendPage(const void *data)
 }
 
 
-unsigned FileHandle::GetNumberOfPages()
+unsigned FileHandle::getNumberOfPages()
 {
     return pagenumber;
 }
