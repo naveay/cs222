@@ -734,6 +734,16 @@ int main()
     RBFTest_5(pfm);
     RBFTest_6(pfm);
     RBFTest_7(pfm);
+
+
+    remove("t.txt");
+
+    FileHandle test;
+    pfm->createFile("t.txt");
+    pfm->openFile("t.txt",test);
+    rbfm->initialDirectory(test,0);
+    //rbfm->getfreeSpacePage(test,1000);
+    pfm->closeFile(test);
     //RBFTest_8(rbfm);
 
     vector<RID> rids;

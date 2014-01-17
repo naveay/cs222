@@ -13,6 +13,7 @@ typedef int RC;
 //5. pageNum is not exist;
 //6. data is too long. out of page_size;
 //7. file is still open while destroying.
+//8. file is not empty while initializing the directory
 typedef unsigned PageNum;
 using namespace std;
 #define PAGE_SIZE 4096

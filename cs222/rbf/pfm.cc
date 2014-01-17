@@ -109,11 +109,6 @@ RC FileHandle::readPage(PageNum pageNum, void *data)
 
 RC FileHandle::writePage(PageNum pageNum, const void *data)
 {
-	int len=sizeof(data);
-	if(len>PAGE_SIZE)
-	{
-		return 6;     //data is too long;
-	}
 	if(pageNum==pagenumber)
 		appendPage(data);
 	else if(pageNum>pagenumber)
@@ -124,8 +119,8 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 	{
 		//pFile=fopen(pfile,"rb+");
 		fseek(pFile,pageNum*PAGE_SIZE,SEEK_SET);
-		//fputs((char *)data,pFile);
-		fwrite((char*)data,sizeof(char),PAGE_SIZE,pFile);
+		fputs((char *)data,pFile);
+		//fwrite((char*)data,sizeof(char),len,pFile);
 		fflush (pFile);
 		//fclose(pFile);
 	}
@@ -135,15 +130,10 @@ RC FileHandle::writePage(PageNum pageNum, const void *data)
 
 RC FileHandle::appendPage(const void *data)
 {
-	int len=sizeof(data);
-	if(len>PAGE_SIZE)
-	{
-		return 6;     //data is too long;
-	}
 	//pFile=fopen(pfile,"rb+");
 	fseek(pFile,pagenumber*PAGE_SIZE,SEEK_SET);
-	//fputs((char *)data,pFile);
-	fwrite((char*)data,sizeof(char),PAGE_SIZE,pFile);
+	fputs((char *)data,pFile);
+	//fwrite((char*)data,sizeof(char),len,pFile);
 	fflush (pFile);
 	//fclose(pFile);
 	pagenumber++;
