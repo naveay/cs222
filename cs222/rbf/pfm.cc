@@ -107,7 +107,7 @@ FileHandle::~FileHandle()
 
 RC FileHandle::readPage(PageNum pageNum, void *data)
 {
-	if(pageNum>=pagenumber||pageNum<0)
+	if(pageNum>=pagenumber)
 		return 5;   //pageNum is not exist;
 	fflush(pFile);
 	fseek(pFile,pageNum*PAGE_SIZE,SEEK_SET);
@@ -147,7 +147,7 @@ RC FileHandle::appendPage(const void *data)
 }
 
 
-unsigned FileHandle::getNumberOfPages()
+unsigned int FileHandle::getNumberOfPages()
 {
     return pagenumber;
 }
@@ -160,7 +160,7 @@ RC FileHandle::setFile(FILE *file)
 	else
 		pFile=file;
 	fseek(pFile,0,SEEK_END);
-	pagenumber=ftell(pFile)/PAGE_SIZE;
+	pagenumber=(unsigned)(ftell(pFile)/PAGE_SIZE);
 	return 0;
 }
 

@@ -50,7 +50,7 @@ public:
     RC readPage(PageNum pageNum, void *data);                           // Get a specific page
     RC writePage(PageNum pageNum, const void *data);                    // Write a specific page
     RC appendPage(const void *data);                                    // Append a specific page
-    unsigned getNumberOfPages();                                        // Get the number of pages in the file
+    unsigned int getNumberOfPages();                                    // Get the number of pages in the file
 
 
     RC setFile(FILE *file);

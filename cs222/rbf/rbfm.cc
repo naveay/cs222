@@ -100,7 +100,47 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 }
 
 RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor, const void *data) {
-    return -1;
+    
+    
+    
+    
+    
+    Attribute attr;
+    unsigned int offset = 0;
+    unsigned int namelenght,nrofelement,i,intval;
+    float floatval;
+    nrofelement = (unsigned int)recordDescriptor.size();
+    
+    //------------------------//
+    for (i= 0;i<nrofelement;i++)
+    {
+        switch (recordDescriptor[i].type)
+        {
+            case 0:
+                memcpy(&intval,(char *)data+offset,sizeof(int));
+                cout << recordDescriptor[i].name << ": " << intval << endl;
+                offset+=sizeof(int);
+                break;
+            case 1:
+                memcpy(&floatval,(char *)data+offset,sizeof(float));
+                cout << recordDescriptor[i].name << ": " << floatval << endl;
+                offset+=sizeof(float);
+                break;
+            case 2://string case
+                //read name lengh//
+                namelenght = *(int *)data + offset;
+                offset +=sizeof(int);
+                //read the name//
+                char *name = (char *)malloc(namelenght+1);
+                memset(name,'\0',namelenght+1);
+                memcpy(name,(char *)data+offset,namelenght);
+                cout << recordDescriptor[i].name << ": "<< name << endl;
+                offset+= namelenght;
+                break;
+        }
+    }
+    
+    return 0;
 }
 /* Maintain a list of page with their free space
  * Directory of file. Starting from the first page.
