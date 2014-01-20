@@ -14,6 +14,7 @@ typedef int RC;
 //6. data is too long. out of page_size;
 //7. file is still open while destroying.
 //8. file is not empty while initializing the directory
+//9. attribution is empty
 typedef unsigned PageNum;
 using namespace std;
 #define PAGE_SIZE 4096
@@ -36,7 +37,7 @@ protected:
 
 private:
     static PagedFileManager *_pf_manager;
-    map<const char*,int> *refer;
+    map<string,int> *refer;
 };
 
 
@@ -53,12 +54,12 @@ public:
 
 
     RC setFile(FILE *file);
-    RC setFile(	const char * pfile);
+    RC setFileName(	const char * pfile);
     FILE * getFile();
     const char * getFileName();
 private:
 	FILE *pFile=NULL;
-	const char * pfile=NULL;
+	string pfilename;
     unsigned pagenumber;
 };
 

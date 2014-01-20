@@ -613,7 +613,7 @@ int RBFTest_9(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &size
 
     RID rid;
     void *record = malloc(1000);
-    int numRecords = 2000;
+    int numRecords =4000;
 
     vector<Attribute> recordDescriptor;
     createLargeRecordDescriptor(recordDescriptor);
@@ -665,7 +665,7 @@ int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     rc = rbfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
-    int numRecords = 2000;
+    int numRecords = 3000;
     void *record = malloc(1000);
     void *returnedData = malloc(1000);
 
@@ -692,7 +692,6 @@ int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
             return -1;
         }
     }
-
     // Close the file "test_4"
     rc = rbfm->closeFile(fileHandle);
     assert(rc == success);
@@ -734,22 +733,12 @@ int main()
     RBFTest_5(pfm);
     RBFTest_6(pfm);
     RBFTest_7(pfm);
-
-
-    remove("t.txt");
-
-    FileHandle test;
-    pfm->createFile("t.txt");
-    pfm->openFile("t.txt",test);
-    rbfm->initialDirectory(test,0);
-    //rbfm->getfreeSpacePage(test,1000);
-    pfm->closeFile(test);
-    //RBFTest_8(rbfm);
+    RBFTest_8(rbfm);
 
     vector<RID> rids;
     vector<int> sizes;
-    //RBFTest_9(rbfm, rids, sizes);
-    //RBFTest_10(rbfm, rids, sizes);
+    RBFTest_9(rbfm, rids, sizes);
+    RBFTest_10(rbfm, rids, sizes);
 
     return 0;
 }

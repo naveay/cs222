@@ -124,10 +124,12 @@ public:
 
   RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
 
-  RC initialDirectory(FileHandle &fileHandle,int page);
-  int getfreeSpacePage(FileHandle &fileHandle,unsigned recordsize);
-
-  char * intTochar(int num);
+  RC initialDirectory(FileHandle &fileHandle,unsigned int page);
+  RC initialPage(FileHandle &fileHandle,unsigned int page);
+  RC managePage(FileHandle &fileHandle,unsigned int recordsize,const void* records,RID &rid);
+  int insert(FileHandle &fileHandle,unsigned int page,const void* data,int length);
+  PagedFileManager *pfm;
+  int changeData(const vector<Attribute> &recordDescriptor, const void *data,void* result);
 protected:
   RecordBasedFileManager();
   ~RecordBasedFileManager();
