@@ -541,7 +541,7 @@ int RBFTest_8(RecordBasedFileManager *rbfm) {
     createRecordDescriptor(recordDescriptor);
 
     // Insert a record into a file
-    prepareRecord(6, "Peters", 24, 170.1, 5000, record, &recordSize);
+    prepareRecord(0, "", -24, 170.1,0, record, &recordSize);
     cout << "Insert Data:" << endl;
     rbfm->printRecord(recordDescriptor, record);
 
@@ -613,7 +613,7 @@ int RBFTest_9(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &size
 
     RID rid;
     void *record = malloc(1000);
-    int numRecords =4000;
+    int numRecords =20000;
 
     vector<Attribute> recordDescriptor;
     createLargeRecordDescriptor(recordDescriptor);
@@ -665,7 +665,7 @@ int RBFTest_10(RecordBasedFileManager *rbfm, vector<RID> &rids, vector<int> &siz
     rc = rbfm->openFile(fileName.c_str(), fileHandle);
     assert(rc == success);
 
-    int numRecords = 3000;
+    int numRecords = 20000;
     void *record = malloc(1000);
     void *returnedData = malloc(1000);
 
@@ -737,8 +737,8 @@ int main()
 
     vector<RID> rids;
     vector<int> sizes;
-    RBFTest_9(rbfm, rids, sizes);
-    RBFTest_10(rbfm, rids, sizes);
+    //RBFTest_9(rbfm, rids, sizes);
+    //RBFTest_10(rbfm, rids, sizes);
 
     return 0;
 }

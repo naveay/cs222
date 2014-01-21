@@ -71,6 +71,10 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	void* result=malloc(PAGE_SIZE);
 	fileHandle.readPage(rid.pageNum,result);
 	memcpy(&offset,(char*)result+rid.slotNum,sizeof(int));
+
+	memcpy(&len,(char*)result+rid.slotNum-sizeof(int),sizeof(int));
+	memcpy((char*)data,(char*)result+offset,len);
+	/*
 	for(int i=0;i<recordDescriptor.size();i++)
 	{
 		if(recordDescriptor[i].type==TypeInt)
@@ -95,7 +99,8 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 			offset+=l;
 		}
 	}
-
+	*/
+	free(result);
 	return 0;
 }
 
@@ -107,7 +112,8 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
     
     Attribute attr;
     unsigned int offset = 0;
-    unsigned int namelenght,nrofelement,i,intval;
+    unsigned int namelenght,nrofelement,i;
+    int intval;
     float floatval;
     nrofelement = (unsigned int)recordDescriptor.size();
     
@@ -128,7 +134,8 @@ RC RecordBasedFileManager::printRecord(const vector<Attribute> &recordDescriptor
                 break;
             case 2://string case
                 //read name lengh//
-                namelenght = *(int *)data + offset;
+            	memcpy(&namelenght,(char *)data+offset,sizeof(int));
+                //namelenght = *(int *)data + offset;
                 offset +=sizeof(int);
                 //read the name//
                 char *name = (char *)malloc(namelenght+1);
@@ -171,9 +178,11 @@ int RecordBasedFileManager::insert(FileHandle &fileHandle,unsigned int page,cons
 	memcpy(&num,(char*)d+offset,sizeof(int));
 	num++;
 	memcpy((char*)d+offset,&num,sizeof(int));
-	offset-=sizeof(int)*num;
+	offset-=sizeof(int)*num*2-sizeof(int);
 	slot=offset;
 	memcpy((char*)d+offset,&free_space,sizeof(int));
+	offset-=sizeof(int);
+	memcpy((char*)d+offset,&length,sizeof(int));
 	offset=PAGE_SIZE-sizeof(int);
 	free_space+=length;
 	memcpy((char*)d+offset,&free_space,sizeof(int));
@@ -225,9 +234,9 @@ RC RecordBasedFileManager::managePage(FileHandle & fileHandle, unsigned int reco
 			int freespace;
 			memcpy(&freespace,(char*)data+offset,sizeof(int));
 			offset+=sizeof(int);
-			if(freespace>=recordsize+sizeof(int))
+			if(freespace>=recordsize+sizeof(int)*2)
 			{
-				int diff=freespace-recordsize-sizeof(int);
+				int diff=freespace-recordsize-sizeof(int)*2;
 				memcpy((char*)data+offset-sizeof(int),&diff,sizeof(int));
 				fileHandle.writePage(index,data);
 				free(data);
@@ -248,7 +257,7 @@ RC RecordBasedFileManager::managePage(FileHandle & fileHandle, unsigned int reco
 		memcpy((char*)data+offset,&page,sizeof(int));
 		offset+=sizeof(int);
 
-		int freespace=PAGE_SIZE-recordsize-sizeof(int)*3;
+		int freespace=PAGE_SIZE-recordsize-sizeof(int)*4;
 		memcpy((char*)data+offset,&freespace,sizeof(int));
 		offset+=sizeof(int);
 		fileHandle.writePage(index,data);
@@ -270,14 +279,14 @@ RC RecordBasedFileManager::managePage(FileHandle & fileHandle, unsigned int reco
 
 		fileHandle.readPage(index,data);
 		offset=sizeof(int);
-		index=1;
-		memcpy((char*)data+offset,&index,sizeof(int));
+		int start=1;
+		memcpy((char*)data+offset,&start,sizeof(int));
 		offset+=sizeof(int);
 
 		int page=fileHandle.getNumberOfPages();
 		memcpy((char*)data+offset,&page,sizeof(int));
 		offset+=sizeof(int);
-		int freespace=PAGE_SIZE-recordsize-sizeof(int)*3;
+		int freespace=PAGE_SIZE-recordsize-sizeof(int)*4;
 		memcpy((char*)data+offset,&freespace,sizeof(int));
 		offset+=sizeof(int);
 		fileHandle.writePage(index,data);
