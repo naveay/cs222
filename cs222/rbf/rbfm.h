@@ -123,6 +123,12 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
 public:
 
   RC reorganizeFile(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor);
+protected:
+  RecordBasedFileManager();
+  ~RecordBasedFileManager();
+
+private:
+  static RecordBasedFileManager *_rbf_manager;
 
   RC initialDirectory(FileHandle &fileHandle,unsigned int page);
   RC initialPage(FileHandle &fileHandle,unsigned int page);
@@ -130,12 +136,7 @@ public:
   int insert(FileHandle &fileHandle,unsigned int page,const void* data,int length);
   PagedFileManager *pfm;
   int changeData(const vector<Attribute> &recordDescriptor, const void *data,void* result);
-protected:
-  RecordBasedFileManager();
-  ~RecordBasedFileManager();
-
-private:
-  static RecordBasedFileManager *_rbf_manager;
+  int reverse_changeData(const vector<Attribute> &recordDescriptor, const void *data,void* result);
 
   //get the first page number whose free space is bigger than the size of record
   //update the free space by add the size of records

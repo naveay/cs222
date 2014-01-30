@@ -95,6 +95,7 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
 
 FileHandle::FileHandle()
 {
+	pFile=NULL;
 	pagenumber=0;
 	pfilename="";
 }
@@ -149,6 +150,8 @@ RC FileHandle::appendPage(const void *data)
 
 unsigned int FileHandle::getNumberOfPages()
 {
+	fseek(pFile,0,SEEK_END);
+	pagenumber=(unsigned)(ftell(pFile)/PAGE_SIZE);
     return pagenumber;
 }
 

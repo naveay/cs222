@@ -58,7 +58,7 @@ public:
     FILE * getFile();
     const char * getFileName();
 private:
-	FILE *pFile=NULL;
+	FILE *pFile;
 	string pfilename;
     unsigned pagenumber;
 };
