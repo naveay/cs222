@@ -83,7 +83,9 @@ protected:
   ~RelationManager();
 
 private:
-  static RelationManager *_rm;
+    static RelationManager *_rm;
+    unsigned int tableId;
+    RC UpdateCatalogTable(const vector<Attribute> &recordDescriptor, const void *data);
 };
 
 #endif
