@@ -85,7 +85,10 @@ protected:
 private:
     static RelationManager *_rm;
     unsigned int tableId;
-    RC UpdateCatalogTable(const vector<Attribute> &recordDescriptor, const void *data);
+    RC UpdateCatalogTable(const void *data);
+    RC UpdateColumnTable(const void *data);
+    void catTableRecordDescriptor(vector<Attribute> &recordDescriptor);
+    void colTableRecordDescriptor(vector<Attribute> &recordDescriptor);
 };
 
 #endif

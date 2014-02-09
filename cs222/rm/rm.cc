@@ -20,58 +20,87 @@ RelationManager::~RelationManager()
 }
 
 //this function creates a table which is create a new file for the tables
-//for example employee table which is a file which will have employee data records
+//for example employee table which is a file will have employee data records
 
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
 {
     FileHandle fileHandle;
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
     RC rc;
+    unsigned int temp;
     unsigned int offset = 0;
-    char *data = (char *)malloc(PAGE_SIZE);
+    char *cat_data = (char *)malloc(PAGE_SIZE);
+    char *col_data = (char *)malloc(PAGE_SIZE);
     rc = rbfm->createFile(tableName.c_str());
     if (rc != 0)
     {
         cout << "file is already exist" << endl;
         return -1;
     }
+    //update catalog table//
     //table Id count up//
     tableId ++;
-    memcpy((char*)data,&tableId,sizeof(int));
+    memcpy((char*)cat_data,&tableId,sizeof(int));
     offset +=sizeof(int);
     
     //length of the file name//
     unsigned int tableNameLength = (unsigned int)tableName.size();
-    memcpy((char*)data + offset,&tableNameLength,sizeof(int));
+    memcpy((char*)cat_data + offset,&tableNameLength,sizeof(int));
     offset+=sizeof(int);
     
     //add table name to data//
-    memcpy((char*)data+offset,tableName.c_str(),sizeof(char) * tableNameLength);
+    memcpy((char*)cat_data+offset,tableName.c_str(),sizeof(char) * tableNameLength);
     offset += tableNameLength;
     
     //length of the file name//
     //NOTE make the file name and the table name the same//
     unsigned int fileNameLength = (unsigned int)tableName.size();
-    memcpy((char*)data + offset,&fileNameLength,sizeof(int));
+    memcpy((char*)cat_data + offset,&fileNameLength,sizeof(int));
     offset +=sizeof(int);
     
     //add file name to table//
-    memcpy((char*)data+offset,tableName.c_str(),sizeof(char) * fileNameLength);
+    memcpy((char*)cat_data+offset,tableName.c_str(),sizeof(char) * fileNameLength);
     offset += tableNameLength;
+    rc = UpdateCatalogTable(cat_data);
+
+    //updata Column Table//
+    offset = 0;
+    memcpy((char*)col_data,&tableId,sizeof(int));
+    offset +=sizeof(int);
     
-//changeData(recordDescriptor,data,tmp);
-    rc = UpdateCatalogTable(attrs,data);
+    unsigned int numOfCol = (unsigned int)attrs.size();
+    
+    for (int i=0;i<numOfCol;i++)
+    {
+    
+       temp = (unsigned int)attrs[i].name.size();
+        memcpy((char *)col_data+offset,&temp,sizeof(int));
+        offset +=sizeof(int);
+        memcpy((char *)col_data+offset,&attrs[i].name,temp);
+        offset +=temp;
+    
+        memcpy((char *)col_data+offset,&attrs[i].type,sizeof(int));
+    
+        offset +=sizeof(int);
+        memcpy((char *)col_data+offset,&attrs[i].length,sizeof(int));
+    }
+    UpdateColumnTable(col_data);
+    
+    free(col_data);
+    free(cat_data);
+    
     return -1;
 }
 
 
 //this function updata the catalog table//
-RC RelationManager::UpdateCatalogTable(const vector<Attribute> &recordDescriptor, const void *data)
+RC RelationManager::UpdateCatalogTable(const void *data)
 {
     FileHandle fileHandle;
     RID rid;
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
     RC rc;
+    vector<Attribute> recordDescriptor;
     
     //open the file//
     rc = rbfm->openFile("catalog.bin", fileHandle);
@@ -81,11 +110,88 @@ RC RelationManager::UpdateCatalogTable(const vector<Attribute> &recordDescriptor
         cout << "the catalog.bin file isn't exist" << endl;
         return -1;
     }
+    catTableRecordDescriptor(recordDescriptor);
     //update the table
     rc = rbfm->insertRecord(fileHandle, recordDescriptor, data, rid);
+    
+    rc = rbfm->closeFile(fileHandle);
 
     return -1;
 }
+RC RelationManager::UpdateColumnTable(const void *data)
+{
+    FileHandle fileHandle;
+    RID rid;
+    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+    RC rc;
+    vector<Attribute> recordDescriptor;
+    //open the file//
+    rc = rbfm->openFile("columnTable.bin", fileHandle);
+    if (rc != 0)
+    {
+        cout << "the columnTable.bin file isn't exist" << endl;
+        return -1;
+    }
+    colTableRecordDescriptor(recordDescriptor);
+    
+    rc = rbfm->insertRecord(fileHandle, recordDescriptor, data, rid);
+    
+    rc = rbfm->closeFile(fileHandle);
+    
+    return -1;
+}
+
+//create catalog table record descriptor//
+void RelationManager::catTableRecordDescriptor(vector<Attribute> &recordDescriptor)
+{
+    
+    Attribute attr;
+    attr.name = "TableId";
+    attr.type = TypeInt;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+    
+    attr.name = "TableName";
+    attr.type = TypeVarChar;
+    attr.length = (AttrLength)30;
+    recordDescriptor.push_back(attr);
+    
+    attr.name = "FileName";
+    attr.type = TypeVarChar;
+    attr.length = (AttrLength)30;
+    recordDescriptor.push_back(attr);
+    
+}
+
+//create column table record descriptor//
+void RelationManager::colTableRecordDescriptor(vector<Attribute> &recordDescriptor)
+{
+    
+    Attribute attr;
+    attr.name = "TableId";
+    attr.type = TypeInt;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+    
+    attr.name = "ColumnName";
+    attr.type = TypeVarChar;
+    attr.length = (AttrLength)30;
+    recordDescriptor.push_back(attr);
+    
+    attr.name = "ColumnType";
+    attr.type = TypeInt;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+    
+    attr.name = "ColumnLength";
+    attr.type = TypeInt;
+    attr.length = (AttrLength)4;
+    recordDescriptor.push_back(attr);
+    
+}
+
+
+
 
 RC RelationManager::deleteTable(const string &tableName)
 {
