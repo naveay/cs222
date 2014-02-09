@@ -89,7 +89,7 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
     free(col_data);
     free(cat_data);
     
-    return -1;
+    return 0;
 }
 
 
@@ -115,8 +115,9 @@ RC RelationManager::UpdateCatalogTable(const void *data)
     rc = rbfm->insertRecord(fileHandle, recordDescriptor, data, rid);
     
     rc = rbfm->closeFile(fileHandle);
+    
+    return 0;
 
-    return -1;
 }
 RC RelationManager::UpdateColumnTable(const void *data)
 {
@@ -138,7 +139,7 @@ RC RelationManager::UpdateColumnTable(const void *data)
     
     rc = rbfm->closeFile(fileHandle);
     
-    return -1;
+    return 0;
 }
 
 //create catalog table record descriptor//
@@ -195,6 +196,7 @@ void RelationManager::colTableRecordDescriptor(vector<Attribute> &recordDescript
 
 RC RelationManager::deleteTable(const string &tableName)
 {
+    
     return -1;
 }
 
@@ -205,8 +207,29 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 
 RC RelationManager::insertTuple(const string &tableName, const void *data, RID &rid)
 {
-    return -1;
+    FileHandle fileHandle;
+    RC rc;
+    vector<Attribute> attrs;
+    //open the file//
+    RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+    rc = rbfm->openFile(tableName.c_str(), fileHandle);
+    if (rc !=0)
+    {
+        cout << "Table name is not exist!!!!!" << endl;
+        return -1;
+    }
+
+    rc = getAttributes(tableName.c_str(),attrs);
+    if (rc != 0)
+    {
+        cout << "Error in getting attributes" << endl;
+        return -1;
+    }
+    //insert the data in the file//
+    rc = rbfm->insertRecord(fileHandle, attrs, data, rid);
+    return 0;
 }
+
 
 RC RelationManager::deleteTuples(const string &tableName)
 {
