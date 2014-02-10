@@ -4,7 +4,7 @@
 
 #include <string>
 #include <vector>
-
+#include <sys/stat.h>
 #include "../rbf/rbfm.h"
 
 using namespace std;
@@ -28,7 +28,7 @@ public:
 
   // "data" follows the same format as RelationManager::insertTuple()
   RC getNextTuple(RID &rid, void *data) { return RM_EOF; };
-  RC close() { return -1; };
+  RC close() { return 0; };
 };
 
 
@@ -83,12 +83,17 @@ protected:
   ~RelationManager();
 
 private:
-    static RelationManager *_rm;
-    unsigned int tableId;
-    RC UpdateCatalogTable(const void *data);
-    RC UpdateColumnTable(const void *data);
-    void catTableRecordDescriptor(vector<Attribute> &recordDescriptor);
-    void colTableRecordDescriptor(vector<Attribute> &recordDescriptor);
+  static RelationManager *_rm;
+  string catalog;
+  string column_name;
+  vector<Attribute> catalog_v;
+  vector<Attribute> column_name_v;
+  vector<string> catalog_s;
+  vector<string> column_name_s;
+  unsigned int tableId;
+  RC UpdateCatalogTable(const void *data);
+  RC UpdateColumnTable(const void *data);
+  void initial();
 };
 
 #endif

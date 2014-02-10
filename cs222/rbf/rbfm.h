@@ -4,7 +4,7 @@
 
 #include <string>
 #include <vector>
-
+#include <map>
 #include "../rbf/pfm.h"
 
 using namespace std;
@@ -56,15 +56,33 @@ The scan iterator is NOT required to be implemented for part 1 of the project
 //  }
 //  rbfmScanIterator.close();
 
-
+class RecordBasedFileManager;
+class RBFM_ScanIterator;
 class RBFM_ScanIterator {
 public:
-  RBFM_ScanIterator() {};
+  RBFM_ScanIterator(){};
   ~RBFM_ScanIterator() {};
+  RC readRecord_Att(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
 
   // "data" follows the same format as RecordBasedFileManager::insertRecord()
-  RC getNextRecord(RID &rid, void *data) { return RBFM_EOF; };
-  RC close() { return -1; };
+  int reverse_changeData_Att(const vector<Attribute> &recordDescriptor, const void *data,void* result);
+  RC getNextRecord(RID &rid, void *data);
+  RC readRecordMem(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
+  bool condition(char * data);
+  RC close() { free(memory);return 0; };
+  RecordBasedFileManager *rbfm;
+  FileHandle fileHandle;
+  vector<Attribute> recordDescriptor;
+  string conditionAttribute;
+  CompOp compOp;                  // comparision type such as "<" and "="
+  void const *value;                    // used in the comparison
+  vector<string> attributeNames;
+  void *returndata;
+  RID currentid;
+  int currentpage;
+  bool readintoMem;
+  void *memory;
+  int slot_num;
 };
 
 
@@ -87,9 +105,8 @@ public:
   //     For varchar: use 4 bytes to store the length of characters, then store the actual characters.
   //  !!!The same format is used for updateRecord(), the returned data of readRecord(), and readAttribute()
   RC insertRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
-
   RC readRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
-  
+
   // This method will be mainly used for debugging/testing
   RC printRecord(const vector<Attribute> &recordDescriptor, const void *data);
 
@@ -101,7 +118,7 @@ IMPORTANT, PLEASE READ: All methods below this comment (other than the construct
   RC deleteRecords(FileHandle &fileHandle);
 
   RC deleteRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid);
-
+  RC getNext(RID &rid, void *data);
   // Assume the rid does not change after update
   RC updateRecord(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, const RID &rid);
 
@@ -135,14 +152,18 @@ private:
   RC managePage(FileHandle &fileHandle,unsigned int recordsize,const void* records,RID &rid);
   int insert(FileHandle &fileHandle,unsigned int page,const void* data,int length);
   PagedFileManager *pfm;
+  RC managePage_tmp(FileHandle &fileHandle,unsigned int recordsize,const void* records,RID &rid);
+  int insert_tmp(FileHandle &fileHandle,unsigned int page,const void* data,int length);
   int changeData(const vector<Attribute> &recordDescriptor, const void *data,void* result);
   int reverse_changeData(const vector<Attribute> &recordDescriptor, const void *data,void* result);
-
+  //int reverse_changeData_Att(const vector<Attribute> &recordDescriptor, const void *data,void* result);
+  RC insertRecord_tmp(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const void *data, RID &rid);
+  //RC readRecordMem(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
+  //bool condition(char * data);
   //get the first page number whose free space is bigger than the size of record
   //update the free space by add the size of records
 
   //initialize the directory of the file
-
 };
 
 #endif

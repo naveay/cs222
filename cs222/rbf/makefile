@@ -1,6 +1,5 @@
 
 include ../makefile.inc
-CODEROOT = "../"
 
 all: librbf.a rbftest
 
@@ -24,5 +23,4 @@ $(CODEROOT)/rbf/librbf.a:
 
 .PHONY: clean
 clean:
-	#-rm rbftest *.a *.o *~
-	-rm rbftest *.a *.o
+	-rm rbftest *.a *.o *~
