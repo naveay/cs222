@@ -122,18 +122,17 @@ void RelationManager::initial()
 		rc = UpdateCatalogTable(cat_data);
 
 
-		offset = 0;
-		memcpy((char*)col_data,&tableId,sizeof(int));
-		offset +=sizeof(int);
 
 		unsigned int numOfCol = (unsigned int)catalog_v.size();
 		for (int i=0;i<(int)numOfCol;i++)
 		{
-
+            offset = 0;
+            memcpy((char*)col_data,&tableId,sizeof(int));
+            offset +=sizeof(int);
 			temp = (unsigned int)catalog_v[i].name.length();
 			memcpy((char *)col_data+offset,&temp,sizeof(int));
 			offset +=sizeof(int);
-			memcpy((char *)col_data+offset,&catalog_v[i].name,temp);
+			memcpy((char *)col_data+offset,catalog_v[i].name.c_str(),temp);
 			offset +=temp;
 			memcpy((char *)col_data+offset,&catalog_v[i].type,sizeof(int));
 			offset +=sizeof(int);
@@ -265,7 +264,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	void * returndata=(void*)malloc(100);
 	void * ret=(void*)malloc(100);
 	void * re=(void*)malloc(100);
-	int l=tableName.length();
+	int l= (int)tableName.length();
 	memcpy((char*)returndata,&l,sizeof(int));
 	memcpy((char*)returndata+sizeof(int),tableName.c_str(),sizeof(char) * l);
 	RID rid;
@@ -475,13 +474,13 @@ RC RelationManager::UpdateCatalogTable(const void *data)
     RC rc;
 
     //open the file//
-    rc = rbfm->openFile(catalog, fileHandle);
-
-    if (rc != 0)
-    {
-        rbfm->createFile(catalog);
+    //rc = rbfm->openFile(catalog, fileHandle);
+    rc = rbfm->createFile(catalog);
+//   if (rc != 0)
+//  {
+//    rbfm->createFile(catalog);
         rc = rbfm->openFile(catalog, fileHandle);
-    }
+//}
     //update the table
     rc = rbfm->insertRecord(fileHandle, catalog_v, data, rid);
     rc = rbfm->closeFile(fileHandle);
@@ -494,12 +493,13 @@ RC RelationManager::UpdateColumnTable(const void *data)
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
     RC rc;
     //open the file//
-    rc = rbfm->openFile(column_name, fileHandle);
-    if (rc != 0)
-    {
+
+//    rc = rbfm->openFile(column_name, fileHandle);
+//    if (rc != 0)
+//    {
     	rbfm->createFile(column_name);
     	rc = rbfm->openFile(column_name, fileHandle);
-    }
+//    }
     rc = rbfm->insertRecord(fileHandle, column_name_v, data, rid);
     rc = rbfm->closeFile(fileHandle);
 
