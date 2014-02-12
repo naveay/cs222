@@ -76,7 +76,7 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 		offset+=sizeof(int);
 		memcpy(&pagenum,(char*)result+offset,sizeof(int));
 		offset+=sizeof(int);
-		for(unsigned int i=0;i<pagenum;i++)
+		for(int i=0;i<pagenum;i++)
 		{
 			unsigned int page;
 			memcpy(&page,(char*)result+offset,sizeof(int));
@@ -807,6 +807,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		newID.pageNum=len;
 		memcpy(&len,(char*)result+offset+sizeof(int),sizeof(int));
 		newID.slotNum=len;
+		free(result);
+		free(tmp);
 		return updateRecord(fileHandle,recordDescriptor,data,newID);
 
 	}
@@ -899,6 +901,8 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 						}while(index>0);
 				//--
 			}
+			free(result);
+					free(tmp);
 			return 0;
 	}
 	int length=changeData(recordDescriptor,data,tmp);
@@ -983,6 +987,7 @@ RC RecordBasedFileManager::updateRecord(FileHandle &fileHandle, const vector<Att
 		//--
 	}
 	free(result);
+	free(tmp);
 	return 0;
 }
 
