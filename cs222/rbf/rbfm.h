@@ -146,7 +146,6 @@ protected:
 
 private:
   static RecordBasedFileManager *_rbf_manager;
-
   RC initialDirectory(FileHandle &fileHandle,unsigned int page);
   RC initialPage(FileHandle &fileHandle,unsigned int page);
   RC managePage(FileHandle &fileHandle,unsigned int recordsize,const void* records,RID &rid);

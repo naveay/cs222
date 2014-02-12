@@ -40,9 +40,9 @@ void secA_1(const string &tableName, const int nameLength, const string &name, c
     prepareTuple(nameLength, name, age, height, salary, tuple, &tupleSize);
     cout << "Insert Data:" << endl;
     printTuple(tuple, tupleSize);
-
     RC rc = rm->insertTuple(tableName, tuple, rid);
     assert(rc == success);
+    
     // Given the rid, read the tuple from table
     rc = rm->readTuple(tableName, rid, returnedData);
     assert(rc == success);
@@ -346,11 +346,15 @@ void secA_7(const string &tableName)
         tuples.push_back((char *)tuple);
         sizes[i] = tupleSize;
         rids[i] = rid;
+        if (i > 0) {
+            // Since we are inserting 5 tiny tuples into an empty table where the page size is 4kb, all the 5 tuples should be on the first page. 
+            assert(rids[i - 1].pageNum == rids[i].pageNum);
+        }
         cout << rid.pageNum << endl;
     }
     cout << "After Insertion!" << endl;
     
-    int pageid = 0; // Depends on which page the tuples are
+    int pageid = rid.pageNum;
     rc = rm->reorganizePage(tableName, pageid);
     assert(rc == success);
 
@@ -475,7 +479,7 @@ void Tests()
 
     // Delete Tuples
     secA_5("tbl_employee", 6, "Dillon", 29, 172.5, 7000);
-    /*
+
     // Delete Table
     secA_6("tbl_employee", 6, "Martin", 26, 173.6, 8000);
    
@@ -489,7 +493,7 @@ void Tests()
     createTable("tbl_employee3");
     secA_8_A("tbl_employee3");
 
-    memProfile();*/
+    memProfile();
     return;
 }
 

@@ -9,6 +9,7 @@ RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 RecordBasedFileManager* RecordBasedFileManager::instance()
 {
     if(!_rbf_manager)
+
         _rbf_manager = new RecordBasedFileManager();
     return _rbf_manager;
 }
@@ -66,7 +67,35 @@ RC RecordBasedFileManager::readRecord(FileHandle &fileHandle, const vector<Attri
 	if(recordDescriptor.size()==0)
 	    return 9;
 	void* result=malloc(PAGE_SIZE);
+	int index=0;
+	bool out=false;
+	do{
+		offset=0;
+		int pagenum=0;
+		fileHandle.readPage(index,result);
+		offset+=sizeof(int);
+		memcpy(&pagenum,(char*)result+offset,sizeof(int));
+		offset+=sizeof(int);
+		for(unsigned int i=0;i<pagenum;i++)
+		{
+			unsigned int page;
+			memcpy(&page,(char*)result+offset,sizeof(int));
+			offset+=sizeof(int);
+			if(page==rid.pageNum)
+			{
+				out=true;
+			}
+			offset+=sizeof(int);
+		}
+		if(out)
+			break;
+	}while(index>0);
+	if(!out)
+		return -1;
 	fileHandle.readPage(rid.pageNum,result);
+	memcpy(&offset,(char*)result+PAGE_SIZE-sizeof(int),sizeof(int));
+	if(offset==0)
+		return 10;
 	memcpy(&offset,(char*)result+rid.slotNum,sizeof(int));
 	if(offset==-1)
 		return 10;
@@ -532,6 +561,7 @@ RC RecordBasedFileManager::managePage_tmp(FileHandle & fileHandle, unsigned int 
 	unsigned int pagenum=0;
 	unsigned int current=0;
 	void *data=malloc(PAGE_SIZE);
+	/*
 	do{
 		offset=0;
 		fileHandle.readPage(index,data);
@@ -563,6 +593,41 @@ RC RecordBasedFileManager::managePage_tmp(FileHandle & fileHandle, unsigned int 
 		if(index>0)
 			current=index;
 	}while(index>0);
+	*/
+	offset=0;
+	fileHandle.readPage(index,data);
+	memcpy(&index,(char*)data,sizeof(int));
+	while(index>0)
+	{
+		fileHandle.readPage(index,data);
+		memcpy(&index,(char*)data,sizeof(int));
+		if(index!=0)
+			current=index;
+	}
+	offset+=sizeof(int);
+	memcpy(&pagenum,(char*)data+offset,sizeof(int));
+	offset+=sizeof(int);
+	offset+=sizeof(int)*(pagenum-1)*2;
+	unsigned int page;
+	memcpy(&page,(char*)data+offset,sizeof(int));
+	offset+=sizeof(int);
+	int freespace;
+	memcpy(&freespace,(char*)data+offset,sizeof(int));
+	offset+=sizeof(int);
+	if((unsigned int)freespace>=recordsize+sizeof(int)*2)
+	{
+		int diff=freespace-recordsize-sizeof(int)*2;
+		memcpy((char*)data+offset-sizeof(int),&diff,sizeof(int));
+		fileHandle.writePage(index,data);
+		free(data);
+		rid.pageNum=page;
+		rid.slotNum=insert_tmp(fileHandle,page,records,recordsize);
+
+					//write record to page;
+		return 0;
+	}
+
+
 	if((unsigned int)offset<(PAGE_SIZE-2*sizeof(int)))
 	{
 		pagenum++;
@@ -1069,9 +1134,9 @@ RC RecordBasedFileManager::scan(FileHandle &fileHandle,
 }
 RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
-	//data=(void*)malloc(PAGE_SIZE);
 	unsigned int pagenum=0;
 	int offset=0,index=0;
+	void* m=malloc(PAGE_SIZE);
 	if(readintoMem==true)
 	{
 		bool out=false;
@@ -1163,7 +1228,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			else if(in>=0&&le==-PAGE_SIZE)
 			{
 				rec++;
-				void* m=malloc(PAGE_SIZE);
 				RID n;
 				n.pageNum=currentid.pageNum;
 				n.slotNum=tmp_offset;
@@ -1177,7 +1241,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 					free(m);
 					return readRecord_Att(fileHandle,recordDescriptor,currentid,data);
 				}
-				free(m);
 			}
 			else
 			{
@@ -1219,7 +1282,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 				rec++;
 				if(rec>=slot_num+1)
 				{
-					void* m=malloc(PAGE_SIZE);
 					RID n;
 					n.pageNum=currentid.pageNum;
 					n.slotNum=tmp_offset;
@@ -1233,7 +1295,6 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 						rid.slotNum=currentid.slotNum;
 						return readRecord_Att(fileHandle,recordDescriptor,currentid,data);
 					}
-					free(m);
 				}
 			}
 			else
@@ -1243,6 +1304,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 
 		}
 	}
+	free(m);
 	if(slot_num==-1||rec!=slot_num)
 	{
 		readintoMem=true;
@@ -1256,6 +1318,13 @@ bool RBFM_ScanIterator::condition(char * data)
 {
 	void *result_s=(void*)malloc(PAGE_SIZE);
 	void *comp_s=(void*)malloc(PAGE_SIZE);
+	if(compOp==6)
+	{
+
+		free(result_s);
+		free(comp_s);
+		return true;
+	}
 	for(int i=0;i<(int)recordDescriptor.size();i++)
 	{
 		if(recordDescriptor[i].name==conditionAttribute)
@@ -1268,6 +1337,8 @@ bool RBFM_ScanIterator::condition(char * data)
 			switch(recordDescriptor[i].type)
 			{
 			case 0:
+				free(result_s);
+				free(comp_s);
 				int result,comp;
 				memcpy(&result,(char*)data+start,sizeof(int));
 				memcpy(&comp,(char*)value,sizeof(int));
@@ -1298,6 +1369,8 @@ bool RBFM_ScanIterator::condition(char * data)
 				}
 				break;
 			case 1:
+				free(result_s);
+				free(comp_s);
 				float result_f,comp_f;
 				memcpy(&result_f,(char*)data+start,sizeof(float));
 				memcpy(&comp_f,(char*)value,sizeof(float));
@@ -1333,6 +1406,7 @@ bool RBFM_ScanIterator::condition(char * data)
 				memcpy(&len_2,(char*)value,sizeof(int));
 				memcpy((char*)result_s,(char*)data+start+sizeof(int),len_1);
 				memcpy((char*)comp_s,(char*)value+sizeof(int),len_2);
+				//cout<<result_s+'\0'<< "  "<<comp_s+'\0';
 				r=strcmp((char*)result_s,(char*)comp_s);
 				free(result_s);
 				free(comp_s);
@@ -1370,7 +1444,5 @@ bool RBFM_ScanIterator::condition(char * data)
 			return 0;
 		}
 	}
-	free(result_s);
-	free(comp_s);
 	return 11;
 }

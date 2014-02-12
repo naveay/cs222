@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 #include <sys/stat.h>
 #include "../rbf/rbfm.h"
 
@@ -27,8 +28,15 @@ public:
   ~RM_ScanIterator() {};
 
   // "data" follows the same format as RelationManager::insertTuple()
-  RC getNextTuple(RID &rid, void *data) { return RM_EOF; };
-  RC close() { return 0; };
+  RC getNextTuple(RID &rid, void *data) {
+	  if(rbfm_ScanIterator.getNextRecord(rid,data)!=RM_EOF)
+	  {return 0;}
+	  else
+		  return RM_EOF;
+  };
+  RBFM_ScanIterator rbfm_ScanIterator;
+  RC close() { RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+  	  rbfm->closeFile(rbfm_ScanIterator.fileHandle);return 0; };
 };
 
 
@@ -93,6 +101,7 @@ private:
   unsigned int tableId;
   RC UpdateCatalogTable(const void *data);
   RC UpdateColumnTable(const void *data);
+  map<string,vector<Attribute> > *cache;
   void initial();
 };
 

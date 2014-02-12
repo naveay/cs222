@@ -15,7 +15,7 @@ RelationManager::RelationManager()
 {
 	catalog="catalog";
 	column_name="columnTable";
-
+	cache=new map<string,vector<Attribute> >();
 	Attribute attr;
 	attr.name = "TableId";
 	attr.type = TypeInt;
@@ -218,6 +218,10 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
 
 RC RelationManager::deleteTable(const string &tableName)
 {
+	if(cache->find(tableName)!=cache->end())
+	{
+			cache->erase(tableName);
+	}
 	FileHandle fileHandle;
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	rbfm->destroyFile(tableName);
@@ -257,6 +261,11 @@ RC RelationManager::deleteTable(const string &tableName)
 
 RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &attrs)
 {
+	if(cache->find(tableName)!=cache->end())
+	{
+		attrs=cache->at(tableName);
+		return 0;
+	}
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
 	FileHandle fileHandle;
 	RBFM_ScanIterator rbfm_ScanIterator;
@@ -277,7 +286,10 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	}
 	else
 	{
-		cout<<"adfadf"<<endl;
+		free(returndata);
+		free(ret);
+		free(re);
+		//cout<<"adfadf"<<endl;
 		return -10;
 	}
 	rbfm->closeFile(fileHandle);
@@ -324,6 +336,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	{
 		attrs.push_back(att_pos->at(i));
 	}
+	cache->insert(make_pair<string,vector<Attribute> >(tableName,attrs));
 	rbfm->closeFile(fileHandle1);
 
 	free(returndata);
@@ -357,7 +370,6 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 	rc = getAttributes(tableName,attrs);
 	if (rc != 0)
 	{
-		cout << rc<<"  Error in getting record" << endl;
 		return -1;
 	}
 
@@ -372,7 +384,13 @@ RC RelationManager::readTuple(const string &tableName, const RID &rid, void *dat
 }
 RC RelationManager::deleteTuples(const string &tableName)
 {
-    return -1;
+	FileHandle fileHandle;
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	rbfm->openFile(tableName, fileHandle);
+
+	rbfm->deleteRecords(fileHandle);
+	rbfm->closeFile(fileHandle);
+	return 0;
 }
 
 RC RelationManager::deleteTuple(const string &tableName, const RID &rid)
@@ -435,7 +453,21 @@ RC RelationManager::readAttribute(const string &tableName, const RID &rid, const
 
 RC RelationManager::reorganizePage(const string &tableName, const unsigned pageNumber)
 {
-    return -1;
+
+	RC rc;
+	vector<Attribute> attrs;
+	rc = getAttributes(tableName,attrs);
+	if (rc != 0)
+	{
+		//cout << rc<<"  Error in insert record" << endl;
+		return -1;
+	}
+	FileHandle fileHandle;
+	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+	rc = rbfm->openFile(tableName, fileHandle);
+	rc = rbfm->reorganizePage(fileHandle, attrs, pageNumber);
+	rbfm->closeFile(fileHandle);
+	return 0;
 }
 
 RC RelationManager::scan(const string &tableName,
@@ -445,7 +477,20 @@ RC RelationManager::scan(const string &tableName,
       const vector<string> &attributeNames,
       RM_ScanIterator &rm_ScanIterator)
 {
-    return -1;
+		RC rc;
+		vector<Attribute> attrs;
+		rc = getAttributes(tableName,attrs);
+		if (rc != 0)
+		{
+			cout << rc<<"  Error in insert record" << endl;
+			return -1;
+		}
+		FileHandle fileHandle;
+		RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
+		rc = rbfm->openFile(tableName, fileHandle);
+		rc = rbfm->scan(fileHandle,attrs,conditionAttribute,compOp,value,attributeNames,rm_ScanIterator.rbfm_ScanIterator);
+		//rbfm->closeFile(fileHandle);
+		return 0;
 }
 
 // Extra credit
