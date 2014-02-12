@@ -1,5 +1,6 @@
-
 #include "rm.h"
+#include <string.h>
+
 
 RelationManager* RelationManager::_rm = 0;
 
