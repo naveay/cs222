@@ -1,7 +1,5 @@
+
 #include "rm.h"
-#include <string.h>
-
-
 RelationManager* RelationManager::_rm = 0;
 
 RelationManager* RelationManager::instance()
@@ -143,12 +141,15 @@ void RelationManager::initial()
 			UpdateColumnTable(col_data);
 		}
 	}
+	free(cat_data);
+	free(col_data);
 }
 RC RelationManager::createTable(const string &tableName, const vector<Attribute> &attrs)
 {
     FileHandle fileHandle;
     RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
     RC rc;
+    //cache->insert(pair<string,vector<Attribute> >(tableName,attrs));
     unsigned int temp;
     unsigned int offset = 0;
     char *cat_data = (char *)malloc(PAGE_SIZE);
@@ -157,6 +158,8 @@ RC RelationManager::createTable(const string &tableName, const vector<Attribute>
     if (rc != 0)
     {
         cout << "file is already exist" << endl;
+        free(cat_data);
+        free(col_data);
         return -1;
     }
     //update catalog table//
@@ -221,7 +224,7 @@ RC RelationManager::deleteTable(const string &tableName)
 {
 	if(cache->find(tableName)!=cache->end())
 	{
-			cache->erase(tableName);
+		cache->erase(tableName);
 	}
 	FileHandle fileHandle;
 	RecordBasedFileManager *rbfm = RecordBasedFileManager::instance();
@@ -257,6 +260,8 @@ RC RelationManager::deleteTable(const string &tableName)
 		rbfm->deleteRecord(fileHandle1,column_name_v,r->at(i));
 	}
 	rbfm->closeFile(fileHandle1);
+	free(returndata);
+	free(ret);
     return 0;
 }
 
@@ -271,9 +276,9 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	FileHandle fileHandle;
 	RBFM_ScanIterator rbfm_ScanIterator;
 
-	void * returndata=(void*)malloc(100);
-	void * ret=(void*)malloc(100);
-	void * re=(void*)malloc(100);
+	void * returndata=(void*)malloc(PAGE_SIZE);
+	void * ret=(void*)malloc(PAGE_SIZE);
+	void * re=(void*)malloc(PAGE_SIZE);
 	int l= (int)tableName.length();
 	memcpy((char*)returndata,&l,sizeof(int));
 	memcpy((char*)returndata+sizeof(int),tableName.c_str(),sizeof(char) * l);
@@ -283,22 +288,19 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	if(rbfm_ScanIterator.getNextRecord(rid,ret)!=RM_EOF)
 	{
 		rbfm_ScanIterator.close();
-		memcpy((char*)re,(char*)ret,100);
+		memcpy((char*)re,(char*)ret,PAGE_SIZE);
 	}
 	else
 	{
 		free(returndata);
 		free(ret);
 		free(re);
-		//cout<<"adfadf"<<endl;
 		return -10;
 	}
 	rbfm->closeFile(fileHandle);
-
 	FileHandle fileHandle1;
 	rbfm = RecordBasedFileManager::instance();
 	rbfm->openFile(column_name,fileHandle1);
-
 	map<int,Attribute> *att_pos=new map<int,Attribute>();
 	Attribute attr;
 	RBFM_ScanIterator rbfm_ScanIterator1;

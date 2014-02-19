@@ -68,7 +68,7 @@ public:
   int reverse_changeData_Att(const vector<Attribute> &recordDescriptor, const void *data,void* result);
   RC getNextRecord(RID &rid, void *data);
   RC readRecordMem(FileHandle &fileHandle, const vector<Attribute> &recordDescriptor, const RID &rid, void *data);
-  bool condition(char * data);
+  bool condition(const char * data);
   RC close() { free(memory);return 0; };
   RecordBasedFileManager *rbfm;
   FileHandle fileHandle;

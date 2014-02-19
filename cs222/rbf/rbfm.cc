@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdexcept>
 #include <stdio.h>
+#define mem 4096
 using namespace std;
 RecordBasedFileManager* RecordBasedFileManager::_rbf_manager = 0;
 RecordBasedFileManager* RecordBasedFileManager::instance()
@@ -46,7 +47,7 @@ RC RecordBasedFileManager::insertRecord(FileHandle &fileHandle, const vector<Att
     unsigned int len=0;
     if(recordDescriptor.size()==0)
     	return 9;
-    void* result=malloc(PAGE_SIZE);
+    void* result=malloc(mem);
     len=changeData(recordDescriptor,data,result);
 	managePage(fileHandle,len,result,rid);
     free(result);
@@ -56,7 +57,7 @@ RC RecordBasedFileManager::insertRecord_tmp(FileHandle &fileHandle, const vector
     unsigned int len=0;
     if(recordDescriptor.size()==0)
     	return 9;
-    void* result=malloc(PAGE_SIZE);
+    void* result=malloc(mem);
     len=changeData(recordDescriptor,data,result);
 	managePage_tmp(fileHandle,len,result,rid);
     free(result);
@@ -1141,7 +1142,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 {
 	unsigned int pagenum=0;
 	int offset=0,index=0;
-	void* m=malloc(PAGE_SIZE);
+	void* m=malloc(mem);
 	if(readintoMem==true)
 	{
 		bool out=false;
@@ -1150,16 +1151,18 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 			fileHandle.readPage(index,memory);
 			offset+=sizeof(int);
 			memcpy(&pagenum,(char*)memory+offset,sizeof(int));
+
 			offset+=sizeof(int);
 			if(currentpage==-1)
 			{
 				int page;
 				memcpy(&page,(char*)memory+offset,sizeof(int));
+
 				currentid.pageNum=page;
 				currentpage=page;
+				out=true;
 				break;
 			}
-
 			for(unsigned int i=0;i<pagenum;i++)
 			{
 				int page;
@@ -1186,7 +1189,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		}while(index>0);
 	}
 	if(index==0&&currentpage==-1)
+	{
+		free(m);
 		return RBFM_EOF;
+	}
 	if(readintoMem==true)
 	{
 		fileHandle.readPage(currentpage,memory);
@@ -1201,6 +1207,7 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	{
 		slot_num=-1;
 		readintoMem=true;
+		free(m);
 		return getNextRecord(rid,data);
 	}
 	int rec=0;
@@ -1319,10 +1326,10 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 	//cout<<currentpage<<"   "<<currentid.slotNum<<endl;
 	return 0;
 }
-bool RBFM_ScanIterator::condition(char * data)
+bool RBFM_ScanIterator::condition(const char * data)
 {
-	void *result_s=(void*)malloc(PAGE_SIZE);
-	void *comp_s=(void*)malloc(PAGE_SIZE);
+	void *result_s=(void*)malloc(mem);
+	void *comp_s=(void*)malloc(mem);
 	if(compOp==6)
 	{
 
@@ -1409,8 +1416,14 @@ bool RBFM_ScanIterator::condition(char * data)
 				int len_1,len_2;
 				memcpy(&len_1,(char*)data+start,sizeof(int));
 				memcpy(&len_2,(char*)value,sizeof(int));
-				memcpy((char*)result_s,(char*)data+start+sizeof(int),len_1);
-				memcpy((char*)comp_s,(char*)value+sizeof(int),len_2);
+				free(result_s);
+				free(comp_s);
+				result_s=(void*)malloc(len_1+1);
+				comp_s=(void*)malloc(len_2+1);
+				memset(result_s,'\0',len_1+1);
+				memset(comp_s,'\0',len_2+1);
+				memcpy((char*)result_s,(((char*)(data))+start+sizeof(int)),len_1);
+				memcpy((char*)comp_s,(((char*)(value))+sizeof(int)),len_2);
 				//cout<<result_s+'\0'<< "  "<<comp_s+'\0';
 				r=strcmp((char*)result_s,(char*)comp_s);
 				free(result_s);
