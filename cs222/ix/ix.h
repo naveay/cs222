@@ -67,11 +67,19 @@ class IndexManager {
   static IndexManager *_index_manager;
   PagedFileManager *pfm;
   RC insert_into_leaf(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid);
-  RC initialIndex(FileHandle &fileHandle,unsigned int page);
-  RC initialDirectory(FileHandle &fileHandle,unsigned int page);
+  RC initialIndex(FileHandle &fileHandle,unsigned int page,node &res);
+  RC initialDirectory(FileHandle &fileHandle);
   RC readNode(FileHandle &fileHandle,unsigned int page, node &res);
   RC writeNode(FileHandle &fileHandle,node &res);
   RC freeNode(node &res);
+  int get_left_index(node &parent, node& left);
+  int cut(int length);
+  RC insert_into_leaf_after_splitting(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid);
+  RC insert_into_node(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right);
+  RC insert_into_node_after_splitting(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right);
+  RC insert_into_new_root(FileHandle &fileHandle,const Attribute &attribute,node &left,const void* key,node &right);
+  RC start_new_tree(FileHandle &fileHandle,const Attribute &attribute,const void* key,const RID &rid);
+  RC insert_into_parent(FileHandle &fileHandle,const Attribute &attribute,node &left,const void* key,node &right);
 };
 
 class IX_ScanIterator {

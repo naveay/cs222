@@ -1149,28 +1149,31 @@ RC RBFM_ScanIterator::getNextRecord(RID &rid, void *data)
 		do{
 			offset=0;
 			fileHandle.readPage(index,memory);
+			memcpy(&index,(char*)memory,sizeof(int));
 			offset+=sizeof(int);
 			memcpy(&pagenum,(char*)memory+offset,sizeof(int));
 
 			offset+=sizeof(int);
-			if(currentpage==-1)
-			{
-				int page;
-				memcpy(&page,(char*)memory+offset,sizeof(int));
-
-				currentid.pageNum=page;
-				currentpage=page;
-				out=true;
-				break;
-			}
 			for(unsigned int i=0;i<pagenum;i++)
 			{
 				int page;
 				memcpy(&page,(char*)memory+offset,sizeof(int));
 				offset+=sizeof(int);
-				if(i==pagenum-1)
+
+				if(currentpage<page)
+				{
+					currentid.pageNum=page;
+					currentpage=page;
+					out=true;
+					break;
+				}
+				if(i==pagenum-1&&index==0)
 				{
 					currentpage=-1;
+					continue;
+				}
+				if(i==pagenum-1)
+				{
 					continue;
 				}
 				if(page==currentpage)
