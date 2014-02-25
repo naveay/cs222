@@ -57,7 +57,6 @@ public:
     RC setFileName(	const char * pfile);
     FILE * getFile();
     const char * getFileName();
-private:
 	FILE *pFile;
 	string pfilename;
     unsigned pagenumber;

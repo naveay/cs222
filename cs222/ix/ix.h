@@ -18,13 +18,13 @@ typedef struct node
 	int leftnode;
 	int rightnode;
 	int num;
-	int * start;
-	int * length;
+	int  *start;
+	int  *length;
 	void * data;
 }node;
 
 class IX_ScanIterator;
-
+class IndexManager;
 class IndexManager {
  public:
   static IndexManager* instance();
@@ -58,7 +58,22 @@ class IndexManager {
       bool        lowKeyInclusive,
       bool        highKeyInclusive,
       IX_ScanIterator &ix_ScanIterator);
-
+  RC insert_into_leaf(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid);
+   RC initialIndex(FileHandle &fileHandle,unsigned int page,node &res);
+   RC initialDirectory(FileHandle &fileHandle);
+   RC readNode(FileHandle &fileHandle,unsigned int page, node &res);
+   RC writeNode(FileHandle &fileHandle,node &res);
+   RC freeNode(node &res);
+   int get_left_index(node &parent, node& left);
+   int cut(int length);
+   RC insert_into_leaf_after_splitting(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid);
+   RC insert_into_node(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right);
+   RC insert_into_node_after_splitting(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right);
+   RC insert_into_new_root(FileHandle &fileHandle,const Attribute &attribute,node &left,const void* key,node &right);
+   RC start_new_tree(FileHandle &fileHandle,const Attribute &attribute,const void* key,const RID &rid);
+   RC insert_into_parent(FileHandle &fileHandle,const Attribute &attribute,node &left,const void* key,node &right);
+   void print(FileHandle &fileHandle,const Attribute &attribute,int root,const void* key);
+   int find_leaf(FileHandle &fileHandle,const Attribute &attribute,int root,const void* key);
  protected:
   IndexManager   ();                            // Constructor
   ~IndexManager  ();                            // Destructor
@@ -66,20 +81,7 @@ class IndexManager {
  private:
   static IndexManager *_index_manager;
   PagedFileManager *pfm;
-  RC insert_into_leaf(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid);
-  RC initialIndex(FileHandle &fileHandle,unsigned int page,node &res);
-  RC initialDirectory(FileHandle &fileHandle);
-  RC readNode(FileHandle &fileHandle,unsigned int page, node &res);
-  RC writeNode(FileHandle &fileHandle,node &res);
-  RC freeNode(node &res);
-  int get_left_index(node &parent, node& left);
-  int cut(int length);
-  RC insert_into_leaf_after_splitting(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid);
-  RC insert_into_node(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right);
-  RC insert_into_node_after_splitting(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right);
-  RC insert_into_new_root(FileHandle &fileHandle,const Attribute &attribute,node &left,const void* key,node &right);
-  RC start_new_tree(FileHandle &fileHandle,const Attribute &attribute,const void* key,const RID &rid);
-  RC insert_into_parent(FileHandle &fileHandle,const Attribute &attribute,node &left,const void* key,node &right);
+
 };
 
 class IX_ScanIterator {
@@ -89,6 +91,16 @@ class IX_ScanIterator {
 
   RC getNextEntry(RID &rid, void *key);  		// Get next matching entry
   RC close();             						// Terminate index scan
+  IndexManager *_index_manager;
+  FileHandle fileHandle;
+  Attribute attribute;
+  void const       *lowKey;
+  void const       *highKey;
+  bool lowKeyInclusive;
+  bool highKeyInclusive;
+  int currentpage;
+  int slot;
+  node leaf;
 };
 
 // print out the error message for a given return code

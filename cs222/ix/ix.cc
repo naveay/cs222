@@ -45,12 +45,301 @@ RC IndexManager::closeFile(FileHandle &fileHandle)
 
 RC IndexManager::insertEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	return -1;
+	void *data = malloc(PAGE_SIZE);
+	int index;
+	fileHandle.readPage(0,data);
+	memcpy(&index,(char*)data,sizeof(int));
+	if(index==-1)
+	{
+		start_new_tree(fileHandle,attribute,key,rid);
+		return 0;
+	}
+	int l=find_leaf(fileHandle,attribute,index,key);
+	node leaf;
+	readNode(fileHandle,l,leaf);
+	//
+	if(leaf.freespace>=(int)((attribute.length+sizeof(int)*4)*3))
+	{
+		insert_into_leaf(fileHandle,l,attribute,key,rid);
+		freeNode(leaf);
+		return 0;
+	}
+	insert_into_leaf_after_splitting(fileHandle,l,attribute,key,rid);
+	freeNode(leaf);
+	return 0;
 }
+void IndexManager::print(FileHandle &fileHandle,const Attribute &attribute,int root,const void* key)
+{
+	cout<<endl;
+	cout<<endl;
+	node r;
+	root=3;
+	int level=0;
+	//do
 
+	readNode(fileHandle,root,r);
+	//while(r.isleaf!=1)
+	{
+		for(int i=0;i<r.num;i++)
+		{
+			int tmp,a,b;
+			memcpy(&tmp,(char*)r.data+r.start[i]+sizeof(int)*2,sizeof(int));
+			memcpy(&a,(char*)r.data+r.start[i],sizeof(int));
+			memcpy(&b,(char*)r.data+r.start[i]+sizeof(int),sizeof(int));
+			cout<<tmp<<" "<<a<<" "<<b<<" ";
+		}
+		node sys;
+		if(r.rightnode!=-1)
+		{
+			readNode(fileHandle,r.rightnode,sys);
+
+			do
+			{
+				readNode(fileHandle,sys.rightnode,sys);
+				cout<<" || ";
+				for(int i=0;i<sys.num;i++)
+				{
+					int tmp,a,b;
+								memcpy(&tmp,(char*)r.data+r.start[i]+sizeof(int)*2,sizeof(int));
+								memcpy(&a,(char*)r.data+r.start[i],sizeof(int));
+								memcpy(&b,(char*)r.data+r.start[i]+sizeof(int),sizeof(int));
+								cout<<tmp<<" "<<a<<" "<<b<<" ";
+				}
+			}
+			while(sys.rightnode!=-1);cout<<" || ";
+			for(int i=0;i<sys.num;i++)
+			{
+				int tmp;
+				memcpy(&tmp,(char*)sys.data+sys.start[i]+sizeof(int)*2,sizeof(int));
+				cout<<tmp<<" ";
+			}
+		}
+		level++;
+		memcpy(&root,(char*)r.data+r.start[0],sizeof(int));
+		readNode(fileHandle,root,r);
+	}
+
+cout<<endl;
+	readNode(fileHandle,1,r);
+		//while(r.isleaf!=1)
+		{
+			for(int i=0;i<r.num;i++)
+			{
+				int tmp;
+				memcpy(&tmp,(char*)r.data+r.start[i]+sizeof(int)*2,sizeof(int));
+				cout<<tmp<<" ";
+			}
+			node sys;
+			if(r.rightnode!=-1)
+			{
+				readNode(fileHandle,r.rightnode,sys);
+
+				do
+				{
+					readNode(fileHandle,sys.rightnode,sys);
+					cout<<" || ";
+					for(int i=0;i<sys.num;i++)
+					{
+						int tmp;
+						memcpy(&tmp,(char*)sys.data+sys.start[i]+sizeof(int)*2,sizeof(int));
+						cout<<tmp<<" ";
+					}
+				}
+				while(sys.rightnode!=-1);cout<<" || ";
+				for(int i=0;i<sys.num;i++)
+				{
+					int tmp;
+					memcpy(&tmp,(char*)sys.data+sys.start[i]+sizeof(int)*2,sizeof(int));
+					cout<<tmp<<" ";
+				}
+			}
+			level++;
+			memcpy(&root,(char*)r.data+r.start[0],sizeof(int));
+			readNode(fileHandle,root,r);
+		}
+	//while(r.isleaf!=1);
+
+
+}
+int IndexManager::find_leaf(FileHandle &fileHandle,const Attribute &attribute,int root,const void* key)
+{
+	node r;
+	readNode(fileHandle,root,r);
+	if(key==NULL)
+	{
+		while(r.isleaf!=1)
+		{
+			int page;
+			memcpy(&page,(char*)r.data+r.start[0],sizeof(int));
+			freeNode(r);
+			readNode(fileHandle,page,r);
+		}
+		int result=r.pagenum;
+		freeNode(r);
+		return result;
+	}
+	while(r.isleaf!=1)
+	{
+		int i=0;
+		while(i<r.num)
+		{
+			if(attribute.type==TypeInt)
+			{
+				int comp1,comp2;
+				memcpy(&comp1,(char*)r.data+r.start[i]+sizeof(int)*2,sizeof(int));
+				memcpy(&comp2,(char*)key,sizeof(int));
+				if(comp2>=comp1)
+				{
+					i++;
+					continue;
+				}
+				else
+					break;
+			}
+			else if(attribute.type==TypeReal)
+			{
+				float comp1,comp2;
+				memcpy(&comp1,(char*)r.data+r.start[i]+sizeof(int)*2,sizeof(float));
+				memcpy(&comp2,(char*)key,sizeof(float));
+				if(comp2>=comp1)
+				{
+					i++;
+					continue;
+				}
+				else
+					break;
+			}
+			else
+			{
+				int len_1,len_2;
+				memcpy(&len_1,(char*)r.data+r.start[i]+sizeof(int)*2,sizeof(int));
+				memcpy(&len_2,(char*)key,sizeof(int));
+				void* comp1=(void*)malloc(len_1+1);
+				void* comp2=(void*)malloc(len_2+1);
+				memset(comp1,'\0',len_1+1);
+				memset(comp2,'\0',len_2+1);
+				memcpy((char*)comp1,(char*)r.data+r.start[i]+sizeof(int)*3,len_1);
+				memcpy((char*)comp2,(char*)key+sizeof(int),len_2);
+				int r=strcmp((char*)comp1,(char*)comp2);
+				free(comp1);
+				free(comp2);
+				if(r<=0)
+				{
+					i++;
+					continue;
+				}
+				else
+					break;
+			}
+		}
+		if(i<r.num)
+		{
+			int page;
+			memcpy(&page,(char*)r.data+r.start[i],sizeof(int));
+			freeNode(r);
+			readNode(fileHandle,page,r);
+		}
+		else
+		{
+			int page;
+			memcpy(&page,(char*)r.data+r.start[i-1]+sizeof(int),sizeof(int));
+			freeNode(r);
+			readNode(fileHandle,page,r);
+		}
+	}
+	int result=r.pagenum;
+	freeNode(r);
+	return result;
+}
 RC IndexManager::deleteEntry(FileHandle &fileHandle, const Attribute &attribute, const void *key, const RID &rid)
 {
-	return -1;
+	void *data = malloc(PAGE_SIZE);
+	int index;
+	fileHandle.readPage(0,data);
+	memcpy(&index,(char*)data,sizeof(int));
+	if(index==-1)
+	{
+		free(data);
+		return -1;
+	}
+	int l=find_leaf(fileHandle,attribute,index,key);
+	node leaf;
+	readNode(fileHandle,l,leaf);
+
+	int left_index=0;
+	for(left_index=0;left_index<leaf.num;left_index++)
+	{
+		if(attribute.type==TypeInt)
+		{
+			int comp1,comp2;
+			memcpy(&comp1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
+			memcpy(&comp2,(char*)key,sizeof(int));
+			if(comp1==comp2)
+			{
+				int page,slot;
+				memcpy(&page,(char*)leaf.data+leaf.start[left_index],sizeof(int));
+				memcpy(&slot,(char*)leaf.data+leaf.start[left_index]+sizeof(int),sizeof(int));
+				if(page==(int)rid.pageNum&&slot==(int)rid.slotNum)
+				{
+					break;
+				}
+			}
+		}
+		else if(attribute.type==TypeReal)
+		{
+			float comp1,comp2;
+			memcpy(&comp1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(float));
+			memcpy(&comp2,(char*)key,sizeof(float));
+			if(comp1==comp2)
+			{
+				int page,slot;
+				memcpy(&page,(char*)leaf.data+leaf.start[left_index],sizeof(int));
+				memcpy(&slot,(char*)leaf.data+leaf.start[left_index]+sizeof(int),sizeof(int));
+				if(page==(int)rid.pageNum&&slot==(int)rid.slotNum)
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			int len_1,len_2;
+			memcpy(&len_1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
+			memcpy(&len_2,(char*)key,sizeof(int));
+			void* comp1=(void*)malloc(len_1+1);
+			void* comp2=(void*)malloc(len_2+1);
+			memset(comp1,'\0',len_1+1);
+			memset(comp2,'\0',len_2+1);
+			memcpy((char*)comp1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*3,len_1);
+			memcpy((char*)comp2,(char*)key+sizeof(int),len_2);
+			int r=strcmp((char*)comp1,(char*)comp2);
+			free(comp1);
+			free(comp2);
+			if(r==0)
+			{
+				int page,slot;
+				memcpy(&page,(char*)leaf.data+leaf.start[left_index],sizeof(int));
+				memcpy(&slot,(char*)leaf.data+leaf.start[left_index]+sizeof(int),sizeof(int));
+				if(page==(int)rid.pageNum&&slot==(int)rid.slotNum)
+				{
+					break;
+				}
+			}
+		}
+	}
+	if(left_index==leaf.num)
+	{
+		return -1;
+	}
+	for(int i=left_index;i<leaf.num-1;i++)
+	{
+		leaf.start[i]=leaf.start[i+1];
+		leaf.length[i]=leaf.length[i+1];
+	}
+	leaf.num-=1;
+	writeNode(fileHandle,leaf);
+	freeNode(leaf);
+	return 0;
 }
 RC IndexManager::initialDirectory(FileHandle &fileHandle)
 {
@@ -94,14 +383,17 @@ RC IndexManager::insert_into_new_root(FileHandle &fileHandle,const Attribute &at
 	}
 	root.start[0]=root.nextinsert_pos;
 	root.length[0]=length+sizeof(int)*2;
-	memcpy((char*)root.data+root.nextinsert_pos,&left.num,sizeof(int));
-	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int),&right.num,sizeof(int));
-	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int)*2,key,length);
-	void* read=(void*)malloc(PAGE_SIZE);
-	memcpy((char*)read,&root.num,sizeof(int));
-	fileHandle.writePage(0,read);
+	int x=left.pagenum;
+	memcpy((char*)root.data+root.nextinsert_pos,&x,sizeof(int));
+	x=right.pagenum;
+	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int),&x,sizeof(int));
+	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int)*2,(char*)key,length);
+	void* re=(void*)malloc(PAGE_SIZE);
+	x=root.pagenum;
+	memcpy((char*)re,&x,sizeof(int));
+	fileHandle.writePage(0,re);
 	writeNode(fileHandle,root);
-	free(read);
+	free(re);
 	freeNode(root);
 	return 0;
 }
@@ -129,14 +421,17 @@ RC IndexManager::start_new_tree(FileHandle &fileHandle,const Attribute &attribut
 	}
 	root.start[0]=root.nextinsert_pos;
 	root.length[0]=length+sizeof(int)*2;
-	memcpy((char*)root.data+root.nextinsert_pos,&rid.pageNum,sizeof(int));
-	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int),&rid.slotNum,sizeof(int));
-	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int)*2,key,length);
-	void* read=(void*)malloc(PAGE_SIZE);
-	memcpy((char*)read,&root.num,sizeof(int));
-	fileHandle.writePage(0,read);
+	unsigned int x=rid.pageNum;
+	memcpy((char*)root.data+root.nextinsert_pos,&x,sizeof(int));
+	x=rid.slotNum;
+	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int),&x,sizeof(int));
+	memcpy((char*)root.data+root.nextinsert_pos+sizeof(int)*2,(char*)key,length);
+	void* re=(void*)malloc(PAGE_SIZE);
+	int y=root.pagenum;
+	memcpy((char*)re,&y,sizeof(int));
+	fileHandle.writePage(0,re);
 	writeNode(fileHandle,root);
-	free(read);
+	free(re);
 	freeNode(root);
 	return 0;
 }
@@ -205,8 +500,10 @@ RC IndexManager::insert_into_leaf_after_splitting(FileHandle &fileHandle, int pa
 	}
 	for(int i=num_key-1;i>=insertion_point;i--)
 	{
-		res.start[i+1]=res.start[i];
-		res.length[i+1]=res.length[i];
+		int z=res.start[i];
+		res.start[i+1]=z;
+		z=res.length[i];
+		res.length[i+1]=z;
 	}
 	res.start[insertion_point]=res.nextinsert_pos;
 	length+=sizeof(int)*2;
@@ -215,27 +512,32 @@ RC IndexManager::insert_into_leaf_after_splitting(FileHandle &fileHandle, int pa
 	memcpy((char*)res.data+res.nextinsert_pos,&i,sizeof(int));
 	i=rid.slotNum;
 	memcpy((char*)res.data+res.nextinsert_pos+sizeof(int),&i,sizeof(int));
-	memcpy((char*)res.data+res.nextinsert_pos+sizeof(int)*2,key,length-sizeof(int)*2);
+	memcpy((char*)res.data+res.nextinsert_pos+sizeof(int)*2,(char*)key,length-sizeof(int)*2);
 	res.nextinsert_pos=res.nextinsert_pos-length;
 	res.freespace-=length+sizeof(int)*2;
 	res.num++;
-
-	memcpy((char*)new_leaf.data,(char*)res.data,res.nextinsert_pos);
+	memcpy((char*)new_leaf.data,(char*)res.data,PAGE_SIZE);
+	num_key+=1;
 	split=cut(num_key);
 	res.num=split;
 	new_leaf.num=0;
 	for(int i=split,j=0;i<num_key;i++,j++)
 	{
-		new_leaf.start[j]=res.start[i];
-		new_leaf.length[j]=res.length[i];
+		int z=res.start[i];
+		new_leaf.start[j]=z;
+		z=res.length[i];
+		new_leaf.length[j]=z;
 		new_leaf.num++;
 	}
-	new_leaf.leftnode=res.num;
-	new_leaf.rightnode=res.rightnode;
-	res.rightnode=new_leaf.num;
-	insert_into_parent(fileHandle,attribute,res,key,new_leaf);
+	void * prime=(void*)malloc(new_leaf.length[0]-sizeof(int)*2);
+	memcpy((char*)prime,(char*)new_leaf.data+new_leaf.start[0]+sizeof(int)*2,new_leaf.length[0]-sizeof(int)*2);
 	writeNode(fileHandle,res);
 	writeNode(fileHandle,new_leaf);
+	insert_into_parent(fileHandle,attribute,res,prime,new_leaf);
+	writeNode(fileHandle,res);
+	writeNode(fileHandle,new_leaf);
+
+	free(prime);
 	freeNode(new_leaf);
 	freeNode(res);
 	return 0;
@@ -253,7 +555,8 @@ RC IndexManager::insert_into_parent(FileHandle &fileHandle,const Attribute &attr
 	}
 	readNode(fileHandle,parent,p);
 	left_index=get_left_index(p,left);
-	if(p.freespace>=((attribute.length+sizeof(int)*4)*3))
+	//
+	if(p.freespace>=(int(attribute.length+sizeof(int)*4)*3))
 	{
 		insert_into_node(fileHandle,attribute,key,p,left_index,right);
 		freeNode(p);
@@ -272,31 +575,77 @@ RC IndexManager::insert_into_node_after_splitting(FileHandle &fileHandle, const 
 		parent.length[i]=parent.length[i-1];
 	}
 	parent.start[left_index]=parent.nextinsert_pos;
-	parent.length[left_index]=right.length[0];
+	if(attribute.type==TypeInt)
+	{
+		parent.length[left_index]=sizeof(int)+sizeof(int)*2;
+	}
+	else if(attribute.type==TypeReal)
+	{
+		parent.length[left_index]=sizeof(float)+sizeof(int)*2;
+	}
+	else
+	{
+		int len;
+		memcpy(&len,(char*)key,sizeof(int));
+		parent.length[left_index]=sizeof(int)+len+sizeof(int)*2;
+	}
+
 	int n=right.leftnode;
 	memcpy((char*)parent.data+parent.nextinsert_pos,&n,sizeof(int));
 	n=right.pagenum;
 	memcpy((char*)parent.data+parent.nextinsert_pos+sizeof(int),&n,sizeof(int));
-	memcpy((char*)parent.data+parent.nextinsert_pos+sizeof(int)*2,(char*)key,right.length[0]-sizeof(int)*2);
-	if(!left_index==parent.num)
+	memcpy((char*)parent.data+parent.nextinsert_pos+sizeof(int)*2,(char*)key,parent.length[left_index]-sizeof(int)*2);
+	if(left_index!=parent.num)
 	{
 		memcpy((char*)parent.data+parent.start[left_index+1],&n,sizeof(int));
 	}
 	parent.num++;
+	right.parent=parent.pagenum;
 	//writeNode(fileHandle,parent);
 
 	int num=(int)fileHandle.getNumberOfPages();
 	node new_leaf;
 	initialIndex(fileHandle,num,new_leaf);
-	node res;
-	new_leaf.isleaf=1;
-	int insertion_point=0,split=0;
+	new_leaf.isleaf=0;
+	int split=0;
 	new_leaf.parent=parent.parent;
 	new_leaf.rightnode=parent.rightnode;
 	new_leaf.leftnode=parent.pagenum;
 	parent.rightnode=new_leaf.pagenum;
 
-	//_______
+	split=cut(parent.num);
+	new_leaf.num=0;
+	void * prime=(void*)malloc(parent.length[split-1]-sizeof(int)*2);
+	memcpy((char*)prime,(char*)parent.data+parent.start[split-1]+sizeof(int)*2,parent.length[split-1]-sizeof(int)*2);
+	memcpy((char*)new_leaf.data,(char*)parent.data,PAGE_SIZE);
+	for(int i=split,j=0;i<parent.num;i++,j++)
+	{
+		new_leaf.start[j]=parent.start[i];
+		new_leaf.length[j]=parent.length[i];
+		new_leaf.num++;
+	}
+	parent.num=split-1;
+	for(int i=0;i<new_leaf.num;i++)
+	{
+		int child;
+		memcpy(&child,(char*)new_leaf.data+new_leaf.start[i],sizeof(int));
+		node p,p2;
+		readNode(fileHandle,child,p);
+		p.parent=new_leaf.pagenum;
+		writeNode(fileHandle,p);
+		freeNode(p);
+
+		memcpy(&child,(char*)new_leaf.data+new_leaf.start[i]+sizeof(int),sizeof(int));
+		readNode(fileHandle,child,p2);
+		p2.parent=new_leaf.pagenum;
+		writeNode(fileHandle,p2);
+		freeNode(p2);
+	}
+	writeNode(fileHandle,parent);
+	writeNode(fileHandle,new_leaf);
+	insert_into_parent(fileHandle,attribute,parent,prime,new_leaf);
+	writeNode(fileHandle,parent);
+	writeNode(fileHandle,new_leaf);
 	return 0;
 }
 RC IndexManager::insert_into_node(FileHandle &fileHandle, const Attribute &attribute, const void *key,node &parent,int left_index, node &right)
@@ -308,17 +657,32 @@ RC IndexManager::insert_into_node(FileHandle &fileHandle, const Attribute &attri
 		parent.length[i]=parent.length[i-1];
 	}
 	parent.start[left_index]=parent.nextinsert_pos;
-	parent.length[left_index]=right.length[0];
+	if(attribute.type==TypeInt)
+	{
+		parent.length[left_index]=sizeof(int)+sizeof(int)*2;
+	}
+	else if(attribute.type==TypeReal)
+	{
+		parent.length[left_index]=sizeof(float)+sizeof(int)*2;
+	}
+	else
+	{
+		int len;
+		memcpy(&len,(char*)key,sizeof(int));
+		parent.length[left_index]=sizeof(int)+len+sizeof(int)*2;
+	}
+
 	int n=right.leftnode;
 	memcpy((char*)parent.data+parent.nextinsert_pos,&n,sizeof(int));
 	n=right.pagenum;
 	memcpy((char*)parent.data+parent.nextinsert_pos+sizeof(int),&n,sizeof(int));
-	memcpy((char*)parent.data+parent.nextinsert_pos+sizeof(int)*2,(char*)key,right.length[0]-sizeof(int)*2);
-	if(!left_index==parent.num)
+	memcpy((char*)parent.data+parent.nextinsert_pos+sizeof(int)*2,(char*)key,parent.length[left_index]-sizeof(int)*2);
+	if(left_index!=parent.num)
 	{
 		memcpy((char*)parent.data+parent.start[left_index+1],&n,sizeof(int));
 	}
 	parent.num++;
+	right.parent=parent.pagenum;
 	writeNode(fileHandle,parent);
 	return 0;
 }
@@ -335,7 +699,7 @@ int IndexManager::get_left_index(node &parent, node& left)
 			return left_index;
 		}
 	}
-	return left_index+1;
+	return left_index;
 }
 RC IndexManager::insert_into_leaf(FileHandle &fileHandle, int page, const Attribute &attribute, const void *key, const RID &rid)
 {
@@ -393,8 +757,10 @@ RC IndexManager::insert_into_leaf(FileHandle &fileHandle, int page, const Attrib
 	}
 	for(int i=num_key-1;i>=insertion_point;i--)
 	{
-		res.start[i+1]=res.start[i];
-		res.length[i+1]=res.length[i];
+		int z=res.start[i];
+		res.start[i+1]=z;
+		z=res.length[i];
+		res.length[i+1]=z;
 	}
 	res.start[insertion_point]=res.nextinsert_pos;
 	length+=sizeof(int)*2;
@@ -403,7 +769,7 @@ RC IndexManager::insert_into_leaf(FileHandle &fileHandle, int page, const Attrib
 	memcpy((char*)res.data+res.nextinsert_pos,&i,sizeof(int));
 	i=rid.slotNum;
 	memcpy((char*)res.data+res.nextinsert_pos+sizeof(int),&i,sizeof(int));
-	memcpy((char*)res.data+res.nextinsert_pos+sizeof(int)*2,key,length-sizeof(int)*2);
+	memcpy((char*)res.data+res.nextinsert_pos+sizeof(int)*2,(char*)key,length-sizeof(int)*2);
 	res.nextinsert_pos=res.nextinsert_pos-length;
 	res.freespace-=length+sizeof(int)*2;
 	res.num++;
@@ -514,7 +880,6 @@ RC IndexManager::writeNode(FileHandle &fileHandle,node &res)
 		start=res.start[i];
 		memcpy((char*)res.data+offset,&start,sizeof(int));
 		offset-=sizeof(int);
-
 		length=res.length[i];
 		memcpy((char*)res.data+offset,&length,sizeof(int));
 		offset-=sizeof(int);
@@ -536,7 +901,6 @@ RC IndexManager::initialIndex(FileHandle &fileHandle,unsigned int page,node &res
 	res.start=new int[PAGE_SIZE];
 	res.length=new int[PAGE_SIZE];
 	writeNode(fileHandle,res);
-	freeNode(res);
 	return 0;
 }
 RC IndexManager::freeNode(node &res)
@@ -554,7 +918,22 @@ RC IndexManager::scan(FileHandle &fileHandle,
     bool        	highKeyInclusive,
     IX_ScanIterator &ix_ScanIterator)
 {
-	return -1;
+	FileHandle t;
+	PagedFileManager *pfm=PagedFileManager::instance();
+	RC rc=pfm->openFile(fileHandle.pfilename.c_str(),t);
+	if(rc!=0)
+		return -1;
+	pfm->closeFile(t);
+	ix_ScanIterator._index_manager=this;
+	ix_ScanIterator.fileHandle=fileHandle;
+	ix_ScanIterator.attribute=attribute;
+	ix_ScanIterator.lowKey=lowKey;
+	ix_ScanIterator.highKey=highKey;
+	ix_ScanIterator.lowKeyInclusive=lowKeyInclusive;
+	ix_ScanIterator.highKeyInclusive=highKeyInclusive;
+	ix_ScanIterator.currentpage=-1;
+	ix_ScanIterator.slot=-1;
+	return 0;
 }
 
 IX_ScanIterator::IX_ScanIterator()
@@ -567,12 +946,200 @@ IX_ScanIterator::~IX_ScanIterator()
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 {
-	return -1;
+	if(currentpage==-1)
+	{
+		void *data = malloc(PAGE_SIZE);
+		int index;
+		fileHandle.readPage(0,data);
+		memcpy(&index,(char*)data,sizeof(int));
+		if(index==-1)
+		{
+			free(data);
+			return -1;
+		}
+		int l=_index_manager->find_leaf(fileHandle,attribute,index,lowKey);
+		_index_manager->readNode(fileHandle,l,leaf);
+		currentpage=l;
+	}
+	int left_index;
+	for(left_index=slot+1;left_index<leaf.num;left_index++)
+	{
+		if(attribute.type==TypeInt)
+		{
+			int comp1,comp2,comp3;
+			memcpy(&comp1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
+			if(lowKey!=NULL)
+				memcpy(&comp2,(char*)lowKey,sizeof(int));
+			if(highKey!=NULL)
+				memcpy(&comp3,(char*)highKey,sizeof(int));
+			if(highKey!=NULL)
+			{
+				if(comp1>comp3)
+					return -1;
+				else if(comp1==comp3)
+				{
+					if(!highKeyInclusive)
+						return -1;
+				}
+			}
+
+			if(lowKey!=NULL)
+			{
+				if(comp1<comp2)
+					continue;
+				else if(comp1==comp2)
+				{
+					if(lowKeyInclusive)
+						break;
+					else
+						continue;
+				}
+				else
+					break;
+			}
+			else
+				break;
+
+
+		}
+		else if(attribute.type==TypeReal)
+		{
+			float comp1,comp2,comp3;
+			memcpy(&comp1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(float));
+			if(lowKey!=NULL)
+				memcpy(&comp2,(char*)lowKey,sizeof(float));
+			if(highKey!=NULL)
+				memcpy(&comp3,(char*)highKey,sizeof(float));
+
+			if(highKey!=NULL)
+			{
+				if(comp1>comp3)
+					return -1;
+				else if(comp1==comp3)
+				{
+					if(!highKeyInclusive)
+						return -1;
+				}
+			}
+
+			if(lowKey!=NULL)
+			{
+				if(comp1<comp2)
+					continue;
+				else if(comp1==comp2)
+				{
+					if(lowKeyInclusive)
+						break;
+					else
+						continue;
+				}
+				else
+					break;
+			}
+			else
+				break;
+		}
+		else
+		{
+			int len_1,len_2,len_3;
+			memcpy(&len_1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
+			void* comp1=(void*)malloc(len_1+1);
+			memset(comp1,'\0',len_1+1);
+			memcpy((char*)comp1,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*3,len_1);
+			int r,r2;
+			if(lowKey!=NULL)
+			{
+				memcpy(&len_2,(char*)lowKey,sizeof(int));
+				void* comp2=(void*)malloc(len_2+1);
+				memset(comp2,'\0',len_2+1);
+				memcpy((char*)comp2,(char*)lowKey+sizeof(int),len_2);
+				r=strcmp((char*)comp1,(char*)comp2);
+				free(comp2);
+			}
+
+			if(highKey!=NULL)
+			{
+				memcpy(&len_3,(char*)highKey,sizeof(int));
+				void* comp3=(void*)malloc(len_3+1);
+				memset(comp3,'\0',len_3+1);
+				memcpy((char*)comp3,(char*)highKey+sizeof(int),len_3);
+				r2=strcmp((char*)comp1,(char*)comp3);
+				free(comp3);
+			}
+
+			free(comp1);
+
+			if(highKey!=NULL)
+			{
+				if(r2>0)
+					return -1;
+				else if(r2==1)
+				{
+					if(!highKeyInclusive)
+						return -1;
+				}
+			}
+			if(lowKey!=NULL)
+			{
+				if(r<0)
+					continue;
+				else if(r==0)
+				{
+					if(lowKeyInclusive)
+						break;
+					else
+						continue;
+				}
+				else
+					break;
+			}
+			else
+				break;
+
+		}
+	}
+	if(left_index==leaf.num)
+	{
+		if(leaf.rightnode==-1)
+			return -1;
+		else
+		{
+			currentpage=leaf.rightnode;
+			slot=-1;
+			_index_manager->freeNode(leaf);
+			_index_manager->readNode(fileHandle,currentpage,leaf);
+			return getNextEntry(rid, key);
+		}
+	}
+
+	currentpage=leaf.pagenum;
+	slot=left_index;
+	unsigned int page,slot_1;
+	memcpy(&page,(char*)leaf.data+leaf.start[left_index],sizeof(int));
+	memcpy(&slot_1,(char*)leaf.data+leaf.start[left_index]+sizeof(int),sizeof(int));
+	rid.pageNum=page;
+	rid.slotNum=slot_1;
+	if(attribute.type==TypeInt)
+	{
+		memcpy((char*)key,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
+	}
+	else if(attribute.type==TypeReal)
+	{
+		memcpy((char*)key,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(float));
+	}
+	else
+	{
+		int len;
+		memcpy(&len,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
+		memcpy((char*)key,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len+sizeof(int));
+	}
+	return 0;
 }
 
 RC IX_ScanIterator::close()
 {
-	return -1;
+	_index_manager->freeNode(leaf);
+	return 0;
 }
 
 void IX_PrintError (RC rc)

@@ -37,7 +37,7 @@ RC PagedFileManager::createFile(const char *fileName)
 	{
 		string name;
 		name.assign(fileName);
-		refer->insert(pair<string,int>(name,0));
+		//refer->insert(pair<string,int>(name,0));
 		pFile=fopen(fileName,"wb+");
 		fclose(pFile);
 		return 0;
@@ -47,13 +47,13 @@ RC PagedFileManager::createFile(const char *fileName)
 
 RC PagedFileManager::destroyFile(const char *fileName)
 {
-	if(refer->find(fileName)->second!=0)
-		return  7;
+	//if(refer->find(fileName)->second!=0)
+		//return  7;
 	if(remove(fileName)==0)
 	{
 		string name;
 		name.assign(fileName);
-		refer->erase(name);
+		//refer->erase(name);
 		return 0;
 	}
 	else
@@ -75,7 +75,7 @@ RC PagedFileManager::openFile(const char *fileName, FileHandle &fileHandle)
 	{
 		string name;
 		name.assign(fileName);
-		refer->insert(pair<string,int>(name,refer->find(name)->second+1));
+		//refer->insert(pair<string,int>(name,refer->find(name)->second+1));
 		fileHandle.setFileName(fileName);
 		return fileHandle.setFile(pFile);
 	}
@@ -86,7 +86,7 @@ RC PagedFileManager::closeFile(FileHandle &fileHandle)
 {
 	string name;
 	name.assign(fileHandle.getFileName());
-	refer->insert(pair<string,int>(name,refer->find(name)->second-1));
+	//refer->insert(pair<string,int>(name,refer->find(name)->second-1));
 	fflush(fileHandle.getFile());
     fclose(fileHandle.getFile());
     return 0;
