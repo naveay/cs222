@@ -1,6 +1,5 @@
 ## For students: change this path to the root of your code
-CODEROOT = ..
-
+CODEROOT = "/home/user/cs222/codebase"
 #CC = gcc
 CC = g++
 

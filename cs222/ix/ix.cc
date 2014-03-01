@@ -1,6 +1,6 @@
 
 #include "ix.h"
-
+#include "string.h"
 IndexManager* IndexManager::_index_manager = 0;
 #define ORDER 400;
 IndexManager* IndexManager::instance()
@@ -33,9 +33,11 @@ RC IndexManager::destroyFile(const string &fileName)
 RC IndexManager::openFile(const string &fileName, FileHandle &fileHandle)
 {
 	RC result=pfm->openFile(fileName.c_str(),fileHandle);
-		if(fileHandle.getNumberOfPages()==0)
-			initialDirectory(fileHandle);
+	if(result!=0)
 		return result;
+	if(fileHandle.getNumberOfPages()==0)
+		initialDirectory(fileHandle);
+	return result;
 }
 
 RC IndexManager::closeFile(FileHandle &fileHandle)
@@ -933,6 +935,7 @@ RC IndexManager::scan(FileHandle &fileHandle,
 	ix_ScanIterator.highKeyInclusive=highKeyInclusive;
 	ix_ScanIterator.currentpage=-1;
 	ix_ScanIterator.slot=-1;
+	ix_ScanIterator.ck=NULL;
 	return 0;
 }
 
@@ -946,6 +949,7 @@ IX_ScanIterator::~IX_ScanIterator()
 
 RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 {
+	node leaf;
 	if(currentpage==-1)
 	{
 		void *data = malloc(PAGE_SIZE);
@@ -957,12 +961,13 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			free(data);
 			return -1;
 		}
+		free(data);
 		int l=_index_manager->find_leaf(fileHandle,attribute,index,lowKey);
-		_index_manager->readNode(fileHandle,l,leaf);
 		currentpage=l;
 	}
+	_index_manager->readNode(fileHandle,currentpage,leaf);
 	int left_index;
-	for(left_index=slot+1;left_index<leaf.num;left_index++)
+	for(left_index=0;left_index<leaf.num;left_index++)
 	{
 		if(attribute.type==TypeInt)
 		{
@@ -975,11 +980,17 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			if(highKey!=NULL)
 			{
 				if(comp1>comp3)
+				{
+					_index_manager->freeNode(leaf);
 					return -1;
+				}
 				else if(comp1==comp3)
 				{
 					if(!highKeyInclusive)
+					{
+						_index_manager->freeNode(leaf);
 						return -1;
+					}
 				}
 			}
 
@@ -990,17 +1001,69 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 				else if(comp1==comp2)
 				{
 					if(lowKeyInclusive)
-						break;
+					{
+						if(ck!=NULL)
+						{
+							int c;
+							memcpy(&c,(char*)ck,sizeof(int));
+							if(comp1>c)
+							{
+								memcpy((char*)ck,&comp1,sizeof(int));
+								break;
+							}
+						}
+						else
+						{
+							free(ck);
+							ck=(void*)malloc(sizeof(int));
+							memcpy((char*)ck,&comp1,sizeof(int));
+							break;
+						}
+					}
 					else
 						continue;
 				}
 				else
-					break;
+				{
+					if(ck!=NULL)
+					{
+						int c;
+						memcpy(&c,(char*)ck,sizeof(int));
+						if(comp1>c)
+						{
+							memcpy((char*)ck,&comp1,sizeof(int));
+							break;
+						}
+					}
+					else
+					{
+						free(ck);
+						ck=(void*)malloc(sizeof(int));
+						memcpy((char*)ck,&comp1,sizeof(int));
+						break;
+					}
+				}
 			}
 			else
-				break;
-
-
+			{
+				if(ck!=NULL)
+				{
+					int c;
+					memcpy(&c,(char*)ck,sizeof(int));
+					if(comp1>c)
+					{
+						memcpy((char*)ck,&comp1,sizeof(int));
+						break;
+					}
+				}
+				else
+				{
+					free(ck);
+					ck=(void*)malloc(sizeof(int));
+					memcpy((char*)ck,&comp1,sizeof(int));
+					break;
+				}
+			}
 		}
 		else if(attribute.type==TypeReal)
 		{
@@ -1014,11 +1077,17 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 			if(highKey!=NULL)
 			{
 				if(comp1>comp3)
+				{
+					_index_manager->freeNode(leaf);
 					return -1;
+				}
 				else if(comp1==comp3)
 				{
 					if(!highKeyInclusive)
+					{
+						_index_manager->freeNode(leaf);
 						return -1;
+					}
 				}
 			}
 
@@ -1029,15 +1098,69 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 				else if(comp1==comp2)
 				{
 					if(lowKeyInclusive)
-						break;
+					{
+						if(ck!=NULL)
+						{
+							float c;
+							memcpy(&c,(char*)ck,sizeof(float));
+							if(comp1>c)
+							{
+								memcpy((char*)ck,&comp1,sizeof(float));
+								break;
+							}
+						}
+						else
+						{
+							free(ck);
+							ck=(void*)malloc(sizeof(float));
+							memcpy((char*)ck,&comp1,sizeof(float));
+							break;
+						}
+					}
 					else
 						continue;
 				}
 				else
-					break;
+				{
+					if(ck!=NULL)
+					{
+						float c;
+						memcpy(&c,(char*)ck,sizeof(float));
+						if(comp1>c)
+						{
+							memcpy((char*)ck,&comp1,sizeof(float));
+							break;
+						}
+					}
+					else
+					{
+						free(ck);
+						ck=(void*)malloc(sizeof(float));
+						memcpy((char*)ck,&comp1,sizeof(float));
+						break;
+					}
+				}
 			}
 			else
-				break;
+			{
+				if(ck!=NULL)
+				{
+					float c;
+					memcpy(&c,(char*)ck,sizeof(float));
+					if(comp1>c)
+					{
+						memcpy((char*)ck,&comp1,sizeof(float));
+						break;
+					}
+				}
+				else
+				{
+					free(ck);
+					ck=(void*)malloc(sizeof(float));
+					memcpy((char*)ck,&comp1,sizeof(float));
+					break;
+				}
+			}
 		}
 		else
 		{
@@ -1067,53 +1190,154 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 				free(comp3);
 			}
 
-			free(comp1);
-
 			if(highKey!=NULL)
 			{
 				if(r2>0)
+				{
+					_index_manager->freeNode(leaf);
+					free(comp1);
 					return -1;
+				}
 				else if(r2==1)
 				{
 					if(!highKeyInclusive)
+					{
+						_index_manager->freeNode(leaf);
+						free(comp1);
 						return -1;
+					}
 				}
 			}
 			if(lowKey!=NULL)
 			{
 				if(r<0)
+				{
+
+					free(comp1);
 					continue;
+				}
 				else if(r==0)
 				{
 					if(lowKeyInclusive)
-						break;
+					{
+						if(ck!=NULL)
+						{
+							int len_4;
+							memcpy(&len_4,(char*)ck,sizeof(int));
+							void* comp4=(void*)malloc(len_4+1);
+							memset(comp4,'\0',len_4+1);
+							memcpy((char*)comp4,(char*)ck+sizeof(int),len_4);
+							int r3=strcmp((char*)comp1,(char*)comp4);
+							free(comp4);
+							if(r3>0)
+							{
+								free(ck);
+								ck=(void*)malloc(len_1+sizeof(int));
+								memcpy((char*)ck,(char*)(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len_1+sizeof(int));
+
+								free(comp1);
+								break;
+							}
+						}
+						else
+						{
+							free(ck);
+							ck=(void*)malloc(len_1+sizeof(int));
+							memcpy((char*)ck,(char*)(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len_1+sizeof(int));
+
+							free(comp1);
+							break;
+						}
+					}
 					else
+					{
+						free(comp1);
 						continue;
+					}
 				}
 				else
-					break;
+				{
+					if(ck!=NULL)
+					{
+						int len_4;
+						memcpy(&len_4,(char*)ck,sizeof(int));
+						void* comp4=(void*)malloc(len_4+1);
+						memset(comp4,'\0',len_4+1);
+						memcpy((char*)comp4,(char*)ck+sizeof(int),len_4);
+						int r3=strcmp((char*)comp1,(char*)comp4);
+						free(comp4);
+						if(r3>0)
+						{
+							free(ck);
+							ck=(void*)malloc(len_1+sizeof(int));
+							memcpy((char*)ck,(char*)(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len_1+sizeof(int));
+
+							free(comp1);
+							break;
+						}
+					}
+					else
+					{
+						free(ck);
+						ck=(void*)malloc(len_1+sizeof(int));
+						memcpy((char*)ck,(char*)(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len_1+sizeof(int));
+
+						free(comp1);
+						break;
+					}
+				}
 			}
 			else
-				break;
+			{
+				if(ck!=NULL)
+				{
+					int len_4;
+					memcpy(&len_4,(char*)ck,sizeof(int));
+					void* comp4=(void*)malloc(len_4+1);
+					memset(comp4,'\0',len_4+1);
+					memcpy((char*)comp4,(char*)ck+sizeof(int),len_4);
+					int r3=strcmp((char*)comp1,(char*)comp4);
+					free(comp4);
+					if(r3>0)
+					{
+						free(ck);
+						ck=(void*)malloc(len_1+sizeof(int));
+						memcpy((char*)ck,(char*)(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len_1+sizeof(int));
+
+						free(comp1);
+						break;
+					}
+				}
+				else
+				{
+					free(ck);
+					ck=(void*)malloc(len_1+sizeof(int));
+					memcpy((char*)ck,(char*)(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len_1+sizeof(int));
+					free(comp1);
+					break;
+				}
+			}
 
 		}
 	}
 	if(left_index==leaf.num)
 	{
 		if(leaf.rightnode==-1)
+		{
+			_index_manager->freeNode(leaf);
 			return -1;
+		}
 		else
 		{
 			currentpage=leaf.rightnode;
-			slot=-1;
 			_index_manager->freeNode(leaf);
 			_index_manager->readNode(fileHandle,currentpage,leaf);
+			_index_manager->freeNode(leaf);
 			return getNextEntry(rid, key);
 		}
 	}
 
 	currentpage=leaf.pagenum;
-	slot=left_index;
 	unsigned int page,slot_1;
 	memcpy(&page,(char*)leaf.data+leaf.start[left_index],sizeof(int));
 	memcpy(&slot_1,(char*)leaf.data+leaf.start[left_index]+sizeof(int),sizeof(int));
@@ -1133,12 +1357,12 @@ RC IX_ScanIterator::getNextEntry(RID &rid, void *key)
 		memcpy(&len,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,sizeof(int));
 		memcpy((char*)key,(char*)leaf.data+leaf.start[left_index]+sizeof(int)*2,len+sizeof(int));
 	}
+	_index_manager->freeNode(leaf);
 	return 0;
 }
 
 RC IX_ScanIterator::close()
 {
-	_index_manager->freeNode(leaf);
 	return 0;
 }
 

@@ -100,7 +100,7 @@ class IX_ScanIterator {
   bool highKeyInclusive;
   int currentpage;
   int slot;
-  node leaf;
+  void * ck;
 };
 
 // print out the error message for a given return code
