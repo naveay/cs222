@@ -339,7 +339,7 @@ RC RelationManager::getAttributes(const string &tableName, vector<Attribute> &at
 	{
 		attrs.push_back(att_pos->at(i));
 	}
-	cache->insert(make_pair<string,vector<Attribute> >(tableName,attrs));
+	cache->insert(pair<string,vector<Attribute> >(tableName,attrs));
 	rbfm->closeFile(fileHandle1);
 
 	free(returndata);
