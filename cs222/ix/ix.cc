@@ -121,7 +121,7 @@ void IndexManager::print(FileHandle &fileHandle,const Attribute &attribute,int r
 		readNode(fileHandle,root,r);
 	}
 
-cout<<endl;
+	cout<<endl;
 	readNode(fileHandle,1,r);
 		//while(r.isleaf!=1)
 		{
@@ -1368,4 +1368,34 @@ RC IX_ScanIterator::close()
 
 void IX_PrintError (RC rc)
 {
+	switch(rc)
+	{
+	case 1:
+		cout<<"file already exist while using createFile";
+		break;
+	case 2:
+		cout<<"file not exist while using deleteFile";
+		break;
+	case 3:
+		cout<<"file not exist while using OpenFile";
+		break;
+	case 4:
+		cout<<"fileHandle is already a handle for an open file when it is passed to the OpenFile method";
+		break;
+	case 5:
+		cout<<"pageNum is not exist;";
+		break;
+	case 6:
+		cout<<"data is too long. out of page_size";
+		break;
+	case 7:
+		cout<<"file is still open while destroying";
+		break;
+	case 8:
+		cout<<"file is not empty while initializing the directory";
+		break;
+	case 9:
+		cout<<"attribution is empty";
+		break;
+	}
 }

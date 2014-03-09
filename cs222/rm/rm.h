@@ -7,6 +7,7 @@
 #include <map>
 #include <sys/stat.h>
 #include "../rbf/rbfm.h"
+#include "../ix/ix.h"
 
 using namespace std;
 
@@ -39,6 +40,21 @@ public:
   	  rbfm->closeFile(rbfm_ScanIterator.fileHandle);return 0; };
 };
 
+class RM_IndexScanIterator {
+ public:
+  RM_IndexScanIterator() {};  	// Constructor
+  ~RM_IndexScanIterator() {}; 	// Destructor
+  IX_ScanIterator ix_scanner;
+  // "key" follows the same format as in IndexManager::insertEntry()
+  RC getNextEntry(RID &rid, void *key){
+	  if(ix_scanner.getNextEntry(rid,key)!=RM_EOF)
+	  {return 0;}
+	  else
+		  return RM_EOF;
+  };  	// Get next matching entry
+  RC close() {IndexManager *_index_manager=IndexManager::instance();
+  _index_manager->closeFile(ix_scanner.fileHandle);return 0;};             			// Terminate index scan
+};
 
 // Relation Manager
 class RelationManager
@@ -75,7 +91,18 @@ public:
       const vector<string> &attributeNames, // a list of projected attributes
       RM_ScanIterator &rm_ScanIterator);
 
+  RC createIndex(const string &tableName, const string &attributeName);
 
+  RC destroyIndex(const string &tableName, const string &attributeName);
+
+  // indexScan returns an iterator to allow the caller to go through qualified entries in index
+  RC indexScan(const string &tableName,
+                        const string &attributeName,
+                        const void *lowKey,
+                        const void *highKey,
+                        bool lowKeyInclusive,
+                        bool highKeyInclusive,
+                        RM_IndexScanIterator &rm_IndexScanIterator);
 // Extra credit
 public:
   RC dropAttribute(const string &tableName, const string &attributeName);
@@ -102,6 +129,8 @@ private:
   RC UpdateCatalogTable(const void *data);
   RC UpdateColumnTable(const void *data);
   map<string,vector<Attribute> > *cache;
+  map<string,int > *index_cache;
+  map<string,Attribute > *index_ca;
   void initial();
 };
 
