@@ -1,5 +1,6 @@
 
 #include "qe.h"
+#include "string.h"
 Filter::Filter(Iterator* input, const Condition &condition) {
 	this->iter=input;
 	this->con=condition;
